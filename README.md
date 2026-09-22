@@ -11,6 +11,14 @@ python3 scripts/preparar_datos.py [datos/Consumo_lotes_de_produccion.csv] [datos
 
 Genera `dashboard/index.html`, un archivo único que se abre en el navegador.
 
+```bash
+python3 scripts/exportar_excel.py
+```
+
+Genera `dashboard/Rendimiento_metalico.xlsx` con las hojas Resumen, Ordenes (base completa), Carta mensual,
+Carta diaria, Grupo x mes, Ranking productos, A corregir y Productos. Los resúmenes son fórmulas sobre la hoja
+Ordenes: si se corrige una orden ahí, todo se recalcula.
+
 ## Reglas
 
 - Las órdenes con rendimiento > 100 % se excluyen de los cálculos y aparecen en la tabla "Órdenes a corregir".

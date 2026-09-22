@@ -194,9 +194,8 @@ def descripcion(nombre, i):
     return " · ".join(partes)
 
 
-def main():
-    ruta = Path(sys.argv[1]) if len(sys.argv) > 1 else CSV_DEFAULT
-    ruta_maestro = Path(sys.argv[2]) if len(sys.argv) > 2 else MAESTRO_DEFAULT
+def cargar(ruta, ruta_maestro):
+    """Devuelve (productos, ordenes, maestro, sin_maestro)."""
     filas = leer_primera_tabla(ruta)
     maestro = leer_maestro(ruta_maestro)
     sin_maestro = set()
@@ -225,11 +224,20 @@ def main():
         ordenes.append({
             "o": f["Orden_prod"].strip(),
             "p": nombre,
+            "original": " ".join(f["Material_prod"].split()),
             "d": ini.strftime("%Y-%m-%d"),
+            "ini": ini,
             "kp": prod,
             "kc": cons,
             "meta": num(f["Rend_Met"]),
         })
+    return productos, ordenes, maestro, sin_maestro
+
+
+def main():
+    ruta = Path(sys.argv[1]) if len(sys.argv) > 1 else CSV_DEFAULT
+    ruta_maestro = Path(sys.argv[2]) if len(sys.argv) > 2 else MAESTRO_DEFAULT
+    productos, ordenes, maestro, sin_maestro = cargar(ruta, ruta_maestro)
 
     lista_prod = sorted(productos)
     idx = {p: k for k, p in enumerate(lista_prod)}
