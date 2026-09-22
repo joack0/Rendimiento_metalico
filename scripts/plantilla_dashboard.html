@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rendimiento Metálico</title>
+<style>
+:root {
+  color-scheme: light;
+  --aza-rojo: #c8102e;
+  --aza-rojo-suave: #fbe9ec;
+  --aza-grafito: #2b2b2b;
+  --page: #f5f5f3;
+  --surface-1: #ffffff;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #6f6e69;
+  --grid: #e8e7e1;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --hover: rgba(11,11,11,0.04);
+  --serie-proceso: #2b2b2b;
+  --limite: #c8102e;
+  --centro: #898781;
+  --meta: #1baf7a;
+  --critical: #d03b3b;
+  --good: #0ca30c;
+  --div-neg: #d03b3b;
+  --div-mid: #f0efec;
+  --div-pos: #2a78d6;
+  --g1: #2a78d6; --g2: #eb6834; --g3: #1baf7a; --g4: #eda100;
+  --g5: #e87ba4; --g6: #008300; --g7: #4a3aa7; --g8: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --aza-rojo: #e8354b;
+    --aza-rojo-suave: #3a1a1f;
+    --aza-grafito: #0d0d0d;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #9a9890;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --hover: rgba(255,255,255,0.06);
+    --serie-proceso: #e6e5df;
+    --limite: #e8354b;
+    --centro: #898781;
+    --meta: #199e70;
+    --div-mid: #383835;
+    --div-pos: #3987e5;
+    --div-neg: #e66767;
+    --g1: #3987e5; --g2: #d95926; --g3: #199e70; --g4: #c98500;
+    --g5: #d55181; --g6: #008300; --g7: #9085e9; --g8: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --aza-rojo: #e8354b;
+  --aza-rojo-suave: #3a1a1f;
+  --aza-grafito: #0d0d0d;
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #9a9890;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --hover: rgba(255,255,255,0.06);
+  --serie-proceso: #e6e5df;
+  --limite: #e8354b;
+  --centro: #898781;
+  --meta: #199e70;
+  --div-mid: #383835;
+  --div-pos: #3987e5;
+  --div-neg: #e66767;
+  --g1: #3987e5; --g2: #d95926; --g3: #199e70; --g4: #c98500;
+  --g5: #d55181; --g6: #008300; --g7: #9085e9; --g8: #e66767;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--text-primary);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+header {
+  background: var(--aza-grafito); color: #fff;
+  border-bottom: 4px solid var(--aza-rojo);
+  padding: 18px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+header h1 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: .2px; }
+header p { margin: 2px 0 0; color: #c9c8c2; font-size: 12.5px; }
+.marca { display: flex; align-items: center; gap: 12px; }
+.marca-bloque { width: 10px; height: 34px; background: var(--aza-rojo); border-radius: 2px; }
+#tema { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: 12.5px; }
+main { max-width: 1320px; margin: 0 auto; padding: 16px 24px 48px; }
+
+.filtros {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--page); padding: 12px 0;
+  display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end;
+  border-bottom: 1px solid var(--border);
+}
+.filtro { display: flex; flex-direction: column; gap: 4px; }
+.filtro > span { font-size: 11.5px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+select {
+  font: inherit; color: var(--text-primary); background: var(--surface-1);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; min-height: 34px; max-width: 320px;
+}
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--surface-1); }
+.seg button { font: inherit; border: 0; background: transparent; color: var(--text-secondary); padding: 6px 12px; min-height: 34px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--aza-rojo); color: #fff; font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+  border-radius: 999px; padding: 5px 11px; min-height: 32px; cursor: pointer;
+}
+.chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.chip[aria-pressed="true"] { color: var(--text-primary); border-color: var(--text-primary); font-weight: 600; }
+.chip[aria-pressed="false"] i { opacity: .35; }
+.chip:disabled { opacity: .45; cursor: default; }
+.btn-link { font: inherit; font-size: 12.5px; background: none; border: 0; color: var(--aza-rojo); cursor: pointer; padding: 4px 2px; text-decoration: underline; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0; }
+.kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.kpi.hero { border-top: 3px solid var(--aza-rojo); }
+.kpi .lbl { font-size: 12.5px; color: var(--text-secondary); }
+.kpi .val { font-size: 26px; font-weight: 650; margin-top: 2px; }
+.kpi.hero .val { font-size: 36px; line-height: 1.1; white-space: nowrap; }
+.kpi.hero { grid-column: span 2; }
+.kpi .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.delta-pos { color: #006300; } .delta-neg { color: var(--critical); }
+:root[data-theme="dark"] .delta-pos { color: var(--good); }
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .delta-pos { color: var(--good); } }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 960px) { .grid2 { grid-template-columns: 1fr; } }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; min-width: 0; }
+.card h2 { font-size: 15.5px; margin: 0; font-weight: 650; }
+.card .desc { color: var(--text-secondary); font-size: 12.5px; margin: 3px 0 10px; }
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-secondary); margin: 6px 0; }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.k-line { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+.k-dash { width: 16px; height: 0; border-top: 2px dashed; display: inline-block; }
+.k-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.k-rect { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+svg { display: block; overflow: visible; }
+svg text { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.vacio { color: var(--text-muted); padding: 30px 0; text-align: center; }
+
+.tabla-wrap { overflow-x: auto; max-height: 460px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { position: sticky; top: 0; background: var(--surface-1); color: var(--text-secondary); font-weight: 600; z-index: 1; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:hover { background: var(--hover); }
+.alerta { color: var(--critical); font-weight: 600; }
+details summary { cursor: pointer; color: var(--text-secondary); font-size: 12.5px; margin-top: 8px; }
+
+.rank-row { cursor: pointer; }
+.rank-row:hover rect.hit { fill: var(--hover); }
+.nota { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+#tip {
+  position: fixed; pointer-events: none; z-index: 20; display: none;
+  background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.15); font-size: 12.5px; max-width: 320px;
+}
+#tip .t { color: var(--text-secondary); margin-bottom: 4px; }
+#tip .r { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+#tip .r b { font-variant-numeric: tabular-nums; }
+#tip .r span { color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 600px) {
+  header, main { padding-left: 16px; padding-right: 16px; }
+  .kpi.hero .val { font-size: 32px; }
+  .kpi.hero { grid-column: auto; }
+  .filtros { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="marca">
+    <div class="marca-bloque"></div>
+    <div>
+      <h1>Rendimiento metálico — carta de control</h1>
+      <p id="subtitulo"></p>
+    </div>
+  </div>
+  <button id="tema" type="button">Cambiar tema</button>
+</header>
+<main>
+  <section class="filtros" aria-label="Filtros">
+    <label class="filtro"><span>Año</span><select id="f-anio"></select></label>
+    <label class="filtro"><span>Desde</span><select id="f-desde"></select></label>
+    <label class="filtro"><span>Hasta</span><select id="f-hasta"></select></label>
+    <div class="filtro"><span>Vista</span>
+      <div class="seg" id="f-vista">
+        <button type="button" data-v="dia">Diaria</button>
+        <button type="button" data-v="mes">Mensual</button>
+        <button type="button" data-v="anio">Anual</button>
+      </div>
+    </div>
+    <div class="filtro"><span>Grupo <button class="btn-link" id="g-todos" type="button">todos</button></span><div class="chips" id="f-grupos"></div></div>
+    <label class="filtro"><span>Producto</span><select id="f-prod"></select></label>
+  </section>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2 id="cc-titulo">Carta de control</h2>
+        <p class="desc" id="cc-desc"></p>
+      </div>
+    </div>
+    <div class="leyenda">
+      <span><i class="k-line" style="border-color:var(--serie-proceso)"></i>Rend. met. (Σ kg prod / Σ kg cons)</span>
+      <span><i class="k-line" style="border-color:var(--centro)"></i>Línea central (LC)</span>
+      <span><i class="k-line" style="border-color:var(--limite)"></i>Límites ±3σ (LCS / LCI)</span>
+      <span><i class="k-dash" style="border-color:var(--meta)"></i>Meta ponderada</span>
+      <span><i class="k-dot" style="background:var(--critical)"></i>▲▼ Fuera de control</span>
+    </div>
+    <div id="cc"></div>
+    <div class="nota" id="cc-nota"></div>
+    <details><summary>Ver tabla de la carta</summary><div class="tabla-wrap" id="cc-tabla" style="margin-top:8px"></div></details>
+  </section>
+
+  <section class="card">
+    <h2>Rendimiento mensual por grupo</h2>
+    <p class="desc">Una gráfica por grupo, misma escala. La línea gris es el total de los grupos seleccionados.</p>
+    <div id="multiples" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Kg producidos por mes</h2>
+      <p class="desc">Volumen de las órdenes válidas, apilado por grupo.</p>
+      <div class="leyenda" id="vol-ley"></div>
+      <div id="vol"></div>
+    </section>
+    <section class="card">
+      <h2>Resumen por grupo</h2>
+      <p class="desc">Rendimiento del período, ordenado de mayor a menor volumen.</p>
+      <div id="grupos"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Ranking de productos</h2>
+        <p class="desc">Haz clic en un producto para filtrar todo el dashboard. <b>*</b> largo asumido (no está en el maestro ni en el nombre).</p>
+      </div>
+      <div class="filtro"><span>Ordenar por</span>
+        <div class="seg" id="f-orden">
+          <button type="button" data-v="kg">Kg producidos</button>
+          <button type="button" data-v="rend">Rendimiento</button>
+        </div>
+      </div>
+    </div>
+    <div class="leyenda">
+      <span><i class="k-rect" style="background:var(--text-muted)"></i>Kg producidos</span>
+      <span><i class="k-dot" style="background:var(--g1)"></i>Rend. met. (color del grupo)</span>
+      <span><i class="k-line" style="border-color:var(--meta);width:2px;height:12px;border-top:0;border-left:2px solid var(--meta)"></i>Meta</span>
+    </div>
+    <div id="ranking" style="max-height:620px;overflow-y:auto"></div>
+  </section>
+
+  <section class="card">
+    <h2>Mapa de calor: producto × mes</h2>
+    <p class="desc">Diferencia del rendimiento contra la meta (puntos porcentuales). Azul = sobre la meta, rojo = bajo la meta. Se muestran los 30 productos de mayor volumen del filtro.</p>
+    <div class="leyenda" id="heat-ley"></div>
+    <div id="heat" style="overflow-x:auto"></div>
+  </section>
+
+  <section class="card">
+    <h2>Órdenes a corregir (rendimiento &gt; 100 %)</h2>
+    <p class="desc">Excluidas de todos los cálculos: producir más kg de los consumidos no es físicamente posible (consumo mal imputado o ajuste de mes). Se muestran según los filtros activos.</p>
+    <div class="tabla-wrap" id="corregir"></div>
+  </section>
+</main>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const DATOS = /*__DATOS__*/null;
+
+const GRUPOS = ["B Hormigón","Redondo liso","Plana","Ángulo","Cuadrado","Estrella","Saferock","Hexágono"];
+const GCOLOR = Object.fromEntries(GRUPOS.map((g,i)=>[g,`var(--g${i+1})`]));
+const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const SVGNS = "http://www.w3.org/2000/svg";
+
+// ---------- datos ----------
+const PROD = DATOS.productos;
+const ORD = DATOS.ordenes.map(([o,pi,d,kp,kc,meta]) => {
+  const p = PROD[pi];
+  return { o, p, pi, d, anio: +d.slice(0,4), mes: +d.slice(5,7), kp, kc, meta, r: kp/kc*100, grupo: p.grupo };
+});
+const VALIDAS = ORD.filter(x => x.r <= 100);
+const EXCLUIDAS = ORD.filter(x => x.r > 100);
+const ANIOS = [...new Set(ORD.map(x=>x.anio))].sort();
+
+// ---------- estado ----------
+const est = { anio: ANIOS[ANIOS.length-1], desde: 1, hasta: 12, vista: "mes", grupos: new Set(GRUPOS), prod: "", orden: "kg" };
+
+// ---------- utilidades ----------
+const nf1 = new Intl.NumberFormat("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1});
+const nf2 = new Intl.NumberFormat("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2});
+const nf0 = new Intl.NumberFormat("es-CL",{maximumFractionDigits:0});
+const pct = v => v==null||isNaN(v) ? "—" : nf2.format(v)+" %";
+const kg = v => nf0.format(v)+" kg";
+const ton = v => v>=1e6 ? nf1.format(v/1e6)+" mil t" : v>=1e3 ? nf0.format(v/1e3)+" t" : nf0.format(v)+" kg";
+const fecha = d => { const [y,m,dd]=d.split("-"); return `${+dd} ${MESES[+m-1]} ${y}`; };
+
+function el(tag, attrs={}, text) {
+  const n = tag.startsWith("svg:") ? document.createElementNS(SVGNS, tag.slice(4)) : document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) if (v!=null) n.setAttribute(k, v);
+  if (text!=null) n.textContent = text;
+  return n;
+}
+const s = (tag, attrs, text) => el("svg:"+tag, attrs, text);
+
+function agregar(lista) {
+  let kp=0, kc=0, metaNum=0, metaDen=0;
+  for (const x of lista) { kp+=x.kp; kc+=x.kc; if (x.meta) { metaNum+=x.meta*x.kc; metaDen+=x.kc; } }
+  return { kp, kc, cnt: lista.length, r: kc ? kp/kc*100 : null, meta: metaDen ? metaNum/metaDen : null };
+}
+function agrupar(lista, clave) {
+  const m = new Map();
+  for (const x of lista) { const k = clave(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); }
+  return m;
+}
+function escala(d0, d1, r0, r1) { const f = v => r0 + (v-d0)/(d1-d0||1)*(r1-r0); f.inv = p => d0 + (p-r0)/(r1-r0)*(d1-d0); return f; }
+function ticks(min, max, n=5) {
+  const paso0 = (max-min)/n, mag = Math.pow(10, Math.floor(Math.log10(paso0||1)));
+  const paso = [1,2,2.5,5,10].map(k=>k*mag).find(k=>k>=paso0) || mag*10;
+  const out=[]; for (let v=Math.ceil(min/paso)*paso; v<=max+1e-9; v+=paso) out.push(+v.toFixed(6)); return out;
+}
+function anchoDe(node, def=800) { return Math.max(280, node.clientWidth || def); }
+
+// ---------- tooltip ----------
+const tip = document.getElementById("tip");
+function mostrarTip(ev, titulo, filas) {
+  tip.replaceChildren();
+  tip.append(el("div",{class:"t"},titulo));
+  for (const [lbl, val, color] of filas) {
+    const r = el("div",{class:"r"});
+    const sp = el("span");
+    if (color) { const k = el("i",{class:"k-line"}); k.style.borderColor = color; sp.append(k); }
+    sp.append(document.createTextNode(lbl));
+    r.append(sp, el("b",{},val));
+    tip.append(r);
+  }
+  tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+  tip.style.left = x+"px"; tip.style.top = y+"px";
+}
+const ocultarTip = () => tip.style.display = "none";
+
+// ---------- filtros ----------
+function filtrar(lista, {sinProd=false, sinGrupo=false, sinPeriodo=false}={}) {
+  return lista.filter(x =>
+    x.anio === est.anio &&
+    (sinPeriodo || (x.mes >= est.desde && x.mes <= est.hasta)) &&
+    (sinGrupo || est.grupos.has(x.grupo)) &&
+    (sinProd || !est.prod || x.p.n === est.prod));
+}
+
+function initFiltros() {
+  const fa = document.getElementById("f-anio");
+  ANIOS.forEach(a => fa.append(el("option",{value:a},a)));
+  fa.value = est.anio;
+  fa.onchange = () => { est.anio = +fa.value; mesesDisponibles(); render(); };
+  const fd = document.getElementById("f-desde"), fh = document.getElementById("f-hasta");
+  fd.onchange = () => { est.desde = +fd.value; if (est.hasta < est.desde) { est.hasta = est.desde; fh.value = est.hasta; } render(); };
+  fh.onchange = () => { est.hasta = +fh.value; if (est.desde > est.hasta) { est.desde = est.hasta; fd.value = est.desde; } render(); };
+  mesesDisponibles();
+
+  document.querySelectorAll("#f-vista button").forEach(b => b.onclick = () => { est.vista = b.dataset.v; render(); });
+  document.querySelectorAll("#f-orden button").forEach(b => b.onclick = () => { est.orden = b.dataset.v; render(); });
+
+  const fg = document.getElementById("f-grupos");
+  const conDatos = new Set(ORD.map(x=>x.grupo));
+  GRUPOS.forEach(g => {
+    const b = el("button",{class:"chip",type:"button","data-g":g});
+    const i = el("i"); i.style.background = GCOLOR[g];
+    b.append(i, document.createTextNode(g + (conDatos.has(g) ? "" : " (sin datos)")));
+    b.onclick = () => {
+      // un clic aísla el grupo; si ya está aislado, vuelve a todos. Ctrl/Cmd+clic suma/quita.
+      if (ev_multi) { est.grupos.has(g) ? est.grupos.delete(g) : est.grupos.add(g); }
+      else if (est.grupos.size === 1 && est.grupos.has(g)) est.grupos = new Set(GRUPOS);
+      else est.grupos = new Set([g]);
+      if (!est.grupos.size) est.grupos = new Set(GRUPOS);
+      est.prod = ""; render();
+    };
+    fg.append(b);
+  });
+  let ev_multi = false;
+  fg.addEventListener("pointerdown", e => ev_multi = e.ctrlKey || e.metaKey || e.shiftKey, true);
+  fg.addEventListener("keydown", e => ev_multi = e.ctrlKey || e.metaKey || e.shiftKey, true);
+  document.getElementById("g-todos").onclick = () => { est.grupos = new Set(GRUPOS); est.prod = ""; render(); };
+  document.getElementById("f-prod").onchange = e => { est.prod = e.target.value; render(); };
+  document.getElementById("tema").onclick = () => {
+    const html = document.documentElement;
+    const oscuro = html.dataset.theme ? html.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    html.dataset.theme = oscuro ? "light" : "dark";
+    try { localStorage.setItem("rm-tema", html.dataset.theme); } catch(e) {}
+    render();
+  };
+  try { const t = localStorage.getItem("rm-tema"); if (t) document.documentElement.dataset.theme = t; } catch(e) {}
+}
+function mesesDisponibles() {
+  const ms = [...new Set(ORD.filter(x=>x.anio===est.anio).map(x=>x.mes))].sort((a,b)=>a-b);
+  const fd = document.getElementById("f-desde"), fh = document.getElementById("f-hasta");
+  fd.replaceChildren(); fh.replaceChildren();
+  ms.forEach(m => { fd.append(el("option",{value:m},MESES[m-1])); fh.append(el("option",{value:m},MESES[m-1])); });
+  est.desde = ms[0]; est.hasta = ms[ms.length-1];
+  fd.value = est.desde; fh.value = est.hasta;
+}
+function syncFiltros() {
+  document.querySelectorAll("#f-vista button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v===est.vista));
+  document.querySelectorAll("#f-orden button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v===est.orden));
+  document.querySelectorAll("#f-grupos .chip").forEach(b => b.setAttribute("aria-pressed", est.grupos.has(b.dataset.g)));
+  const fp = document.getElementById("f-prod");
+  const disponibles = agrupar(filtrar(VALIDAS,{sinProd:true}), x=>x.p.n);
+  const lista = [...disponibles.entries()].map(([n,l])=>({n, p:l[0].p, kp:agregar(l).kp})).sort((a,b)=>b.kp-a.kp);
+  fp.replaceChildren(el("option",{value:""},`Todos (${lista.length})`));
+  lista.forEach(x => fp.append(el("option",{value:x.n}, `${x.n}`)));
+  if (est.prod && !disponibles.has(est.prod)) fp.append(el("option",{value:est.prod},est.prod));
+  fp.value = est.prod;
+  const g = [...est.grupos];
+  document.getElementById("subtitulo").textContent =
+    `Rend. met. = kg producidos / kg consumidos · ${est.anio} · ${MESES[est.desde-1]}–${MESES[est.hasta-1]} · ` +
+    (g.length===GRUPOS.length ? "todos los grupos" : g.join(", ")) + (est.prod ? ` · ${est.prod}` : "") +
+    ` · datos: ${DATOS.fuente}` + (DATOS.maestro ? ` + ${DATOS.maestro}` : "") + ` (${DATOS.generado})`;
+}
+
+// ---------- KPIs ----------
+function renderKPIs() {
+  const v = filtrar(VALIDAS), a = agregar(v), exc = filtrar(EXCLUIDAS);
+  const box = document.getElementById("kpis"); box.replaceChildren();
+  const kpi = (lbl, val, sub, hero, cls) => {
+    const d = el("div",{class:"kpi"+(hero?" hero":"")});
+    d.append(el("div",{class:"lbl"},lbl), el("div",{class:"val"},val));
+    if (sub) d.append(el("div",{class:"sub "+(cls||"")},sub));
+    box.append(d);
+  };
+  const dif = a.r!=null && a.meta!=null ? a.r - a.meta : null;
+  kpi("Rendimiento metálico", pct(a.r),
+      dif==null ? "" : `${dif>=0?"▲ +":"▼ "}${nf2.format(dif)} pp vs meta`, true, dif==null?"":dif>=0?"delta-pos":"delta-neg");
+  kpi("Meta ponderada", pct(a.meta), "promedio de Rend_Met ponderado por kg consumidos");
+  kpi("Kg producidos", ton(a.kp), kg(a.kp));
+  kpi("Kg consumidos", ton(a.kc), kg(a.kc));
+  kpi("Pérdida metálica", ton(a.kc - a.kp), a.kc ? `${nf2.format(100 - a.r)} % del consumo` : "");
+  kpi("Órdenes válidas", nf0.format(a.cnt), `${nf0.format(exc.length)} excluidas por > 100 % (a corregir)`, false, exc.length ? "delta-neg" : "");
+}
+
+// ---------- carta de control ----------
+function puntosCarta() {
+  const v = filtrar(VALIDAS);
+  const clave = est.vista==="dia" ? x=>x.d : est.vista==="mes" ? x=>`${x.anio}-${String(x.mes).padStart(2,"0")}` : x=>String(x.anio);
+  const base = est.vista==="anio" ? VALIDAS.filter(x => (est.grupos.has(x.grupo)) && (!est.prod || x.p.n===est.prod)) : v;
+  const g = agrupar(base, clave);
+  return [...g.entries()].sort((a,b)=>a[0]<b[0]?-1:1).map(([k,l]) => ({ k, ...agregar(l), lista: l }));
+}
+function etiquetaPeriodo(k) {
+  if (est.vista==="dia") return fecha(k);
+  if (est.vista==="mes") { const [y,m]=k.split("-"); return `${MESES[+m-1]} ${y}`; }
+  return k;
+}
+function limites(pts) {
+  const tot = agregar(pts.flatMap(p=>p.lista));
+  const cl = tot.r;
+  if (pts.length < 2) return { cl, ucl: null, lcl: null, sigma: null, meta: tot.meta };
+  let mr = 0; for (let i=1;i<pts.length;i++) mr += Math.abs(pts[i].r - pts[i-1].r);
+  mr /= (pts.length-1);
+  const sigma = mr / 1.128; // carta I-MR (d2 = 1,128)
+  return { cl, ucl: cl + 3*sigma, lcl: cl - 3*sigma, sigma, mrBar: mr, meta: tot.meta };
+}
+function renderCarta() {
+  const cont = document.getElementById("cc"); cont.replaceChildren();
+  const pts = puntosCarta();
+  const L = limites(pts);
+  const nombres = {dia:"diaria", mes:"mensual", anio:"anual"};
+  document.getElementById("cc-titulo").textContent = `Carta de control ${nombres[est.vista]} (I-MR)`;
+  document.getElementById("cc-desc").textContent = est.vista==="anio"
+    ? "Un punto por año con los grupos y el producto seleccionados (ignora el rango de meses)."
+    : est.vista==="dia"
+      ? "Un punto por día: rendimiento ponderado de las órdenes que iniciaron ese día."
+      : "Un punto por mes: rendimiento ponderado de todas las órdenes del mes.";
+  if (!pts.length) { cont.append(el("div",{class:"vacio"},"Sin órdenes para los filtros seleccionados.")); renderTablaCarta(pts,L); return; }
+
+  const W = anchoDe(cont), H = 340, m = {t:18, r:64, b:34, l:48};
+  const vals = pts.map(p=>p.r).concat([L.ucl,L.lcl,L.meta,L.cl].filter(v=>v!=null));
+  let y0 = Math.min(...vals), y1 = Math.max(...vals);
+  const pad = Math.max(0.5,(y1-y0)*0.08); y0 -= pad; y1 = Math.min(Math.max(y1+pad, y0+1), 100.5);
+  const x = pts.length===1 ? (()=>{const f=()=> (m.l+W-m.r)/2; return f;})() : escala(0, pts.length-1, m.l+10, W-m.r-10);
+  const y = escala(y0, y1, H-m.b, m.t);
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Carta de control del rendimiento metálico"});
+
+  for (const t of ticks(y0,y1,6)) {
+    svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y(t),y2:y(t),stroke:"var(--grid)","stroke-width":1}));
+    svg.append(s("text",{x:m.l-8,y:y(t)+4,"text-anchor":"end"},nf1.format(t)+"%"));
+  }
+  svg.append(s("line",{x1:m.l,x2:W-m.r,y1:H-m.b,y2:H-m.b,stroke:"var(--axis)"}));
+  // etiquetas X (espaciadas)
+  const cada = Math.max(1, Math.ceil(pts.length / Math.floor((W-m.l-m.r)/64)));
+  pts.forEach((p,i) => { if (i % cada === 0 || i===pts.length-1 && pts.length<30)
+    svg.append(s("text",{x:x(i),y:H-m.b+17,"text-anchor":"middle"}, est.vista==="dia" ? fecha(p.k).replace(/ \d{4}$/,"") : etiquetaPeriodo(p.k))); });
+
+  const ref = (v, color, lbl, dash) => { if (v==null) return;
+    svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),stroke:color,"stroke-width":1.5,"stroke-dasharray":dash||null}));
+    const t = s("text",{x:W-m.r+6,y:y(v)+4},`${lbl} ${nf2.format(v)}`); t.style.fill="var(--text-secondary)"; svg.append(t);
+  };
+  // separar etiquetas de referencia si chocan
+  const refs = [[L.ucl,"var(--limite)","LCS"],[L.cl,"var(--centro)","LC"],[L.lcl,"var(--limite)","LCI"],[L.meta,"var(--meta)","Meta","5 4"]].filter(r=>r[0]!=null);
+  refs.forEach(r => ref(...r));
+  // evitar solapamiento de textos de referencia
+  const txts = [...svg.querySelectorAll("text")].filter(t=>t.getAttribute("x")==String(W-m.r+6)).sort((a,b)=>a.getAttribute("y")-b.getAttribute("y"));
+  for (let i=1;i<txts.length;i++){ const py=+txts[i-1].getAttribute("y"), cy=+txts[i].getAttribute("y"); if (cy-py<12) txts[i].setAttribute("y", py+12); }
+
+  if (pts.length>1) {
+    const d = pts.map((p,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(p.r).toFixed(1)}`).join("");
+    svg.append(s("path",{d,fill:"none",stroke:"var(--serie-proceso)","stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"}));
+  }
+  const fuera = [];
+  const rad = pts.length > 120 ? 3 : 4.5;
+  pts.forEach((p,i) => {
+    const out = (L.ucl!=null && p.r > L.ucl) || (L.lcl!=null && p.r < L.lcl);
+    if (out) fuera.push(p);
+    svg.append(s("circle",{cx:x(i),cy:y(p.r),r: out? rad+1.5 : rad, fill: out?"var(--critical)":"var(--serie-proceso)", stroke:"var(--surface-1)","stroke-width":2}));
+    if (out) { const t = s("text",{x:x(i),y: p.r > L.ucl ? y(p.r)-10 : y(p.r)+18,"text-anchor":"middle"}, p.r > L.ucl ? "▲" : "▼"); t.style.fill="var(--critical)"; svg.append(t); }
+  });
+  // crosshair
+  const cross = s("line",{y1:m.t,y2:H-m.b,stroke:"var(--axis)","stroke-width":1,visibility:"hidden"});
+  svg.append(cross);
+  const hit = s("rect",{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b,fill:"transparent",tabindex:0});
+  const alMover = ev => {
+    const bb = svg.getBoundingClientRect();
+    const px = ev.clientX - bb.left;
+    let i = pts.length===1 ? 0 : Math.round(escala(0,pts.length-1,m.l+10,W-m.r-10).inv(px));
+    i = Math.max(0, Math.min(pts.length-1, i));
+    const p = pts[i];
+    cross.setAttribute("x1",x(i)); cross.setAttribute("x2",x(i)); cross.setAttribute("visibility","visible");
+    const out = (L.ucl!=null && p.r > L.ucl) || (L.lcl!=null && p.r < L.lcl);
+    mostrarTip(ev, etiquetaPeriodo(p.k) + (out ? " · fuera de control" : ""), [
+      ["Rend. met.", pct(p.r), "var(--serie-proceso)"],
+      ["Meta", pct(p.meta), "var(--meta)"],
+      ["Kg producidos", kg(p.kp)],
+      ["Kg consumidos", kg(p.kc)],
+      ["Órdenes", nf0.format(p.cnt)],
+    ]);
+  };
+  hit.addEventListener("pointermove", alMover);
+  hit.addEventListener("pointerleave", () => { cross.setAttribute("visibility","hidden"); ocultarTip(); });
+  svg.append(hit);
+  cont.append(svg);
+
+  const nota = document.getElementById("cc-nota");
+  nota.textContent = L.sigma==null ? "Se necesitan al menos 2 puntos para calcular límites de control." :
+    `LC = ${pct(L.cl)} · σ estimada = MR̄/1,128 = ${nf2.format(L.sigma)} pp · LCS = ${pct(L.ucl)} · LCI = ${pct(L.lcl)} · ` +
+    (fuera.length ? `${fuera.length} punto(s) fuera de control: ${fuera.map(p=>etiquetaPeriodo(p.k)+" ("+pct(p.r)+")").join(", ")}.` : "Todos los puntos dentro de control.");
+  renderTablaCarta(pts, L);
+}
+function renderTablaCarta(pts, L) {
+  const cont = document.getElementById("cc-tabla"); cont.replaceChildren();
+  const t = el("table"), th = el("thead"), tr = el("tr");
+  ["Período","Órdenes","Kg producidos","Kg consumidos","Rend. met.","Meta","Estado"].forEach((h,i)=>tr.append(el("th",{class:i?"n":""},h)));
+  th.append(tr); t.append(th);
+  const tb = el("tbody");
+  pts.forEach(p => {
+    const out = (L.ucl!=null && p.r > L.ucl) ? "▲ sobre LCS" : (L.lcl!=null && p.r < L.lcl) ? "▼ bajo LCI" : "En control";
+    const r = el("tr");
+    [etiquetaPeriodo(p.k), nf0.format(p.cnt), nf0.format(p.kp), nf0.format(p.kc), pct(p.r), pct(p.meta), out]
+      .forEach((v,i)=>r.append(el("td",{class:(i?"n":"")+(i===6&&out!=="En control"?" alerta":"")},v)));
+    tb.append(r);
+  });
+  t.append(tb); cont.append(t);
+}
+
+// ---------- small multiples por grupo ----------
+function renderMultiples() {
+  const cont = document.getElementById("multiples"); cont.replaceChildren();
+  const v = filtrar(VALIDAS);
+  const meses = []; for (let mm=est.desde; mm<=est.hasta; mm++) meses.push(mm);
+  const total = agrupar(v, x=>x.mes);
+  const porG = agrupar(v, x=>x.grupo);
+  const gs = GRUPOS.filter(g => est.grupos.has(g) && porG.has(g));
+  if (!gs.length) { cont.append(el("div",{class:"vacio"},"Sin datos.")); return; }
+  const series = gs.map(g => { const pm = agrupar(porG.get(g), x=>x.mes); return { g, pts: meses.map(mm => pm.has(mm) ? {mm, ...agregar(pm.get(mm))} : null) }; });
+  const tot = meses.map(mm => total.has(mm) ? {mm, ...agregar(total.get(mm))} : null);
+  const todos = series.flatMap(s=>s.pts).concat(tot).filter(Boolean).map(p=>p.r);
+  let y0 = Math.floor(Math.min(...todos)), y1 = Math.min(100, Math.ceil(Math.max(...todos)));
+  if (y1-y0<2) { y0-=1; y1+=1; }
+  series.forEach(sr => {
+    const card = el("div");
+    const a = agregar(porG.get(sr.g));
+    const head = el("div",{style:"display:flex;justify-content:space-between;align-items:baseline;gap:8px"});
+    const nm = el("div",{style:"font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px"});
+    const k = el("i",{class:"k-line"}); k.style.borderColor = GCOLOR[sr.g]; nm.append(k, document.createTextNode(sr.g));
+    head.append(nm, el("div",{style:"font-size:13px;font-weight:600"}, pct(a.r)));
+    card.append(head);
+    const W = 260, H = 130, m = {t:10,r:10,b:22,l:36};
+    const x = escala(0, Math.max(1,meses.length-1), m.l+4, W-m.r-4), y = escala(y0,y1,H-m.b,m.t);
+    const svg = s("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",role:"img","aria-label":`Rendimiento mensual ${sr.g}`});
+    ticks(y0,y1,3).forEach(t => { svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y(t),y2:y(t),stroke:"var(--grid)"})); svg.append(s("text",{x:m.l-5,y:y(t)+4,"text-anchor":"end"},nf0.format(t)+"%")); });
+    meses.forEach((mm,i) => { if (meses.length<=6 || i%2===0) svg.append(s("text",{x:x(i),y:H-6,"text-anchor":"middle"},MESES[mm-1])); });
+    const linea = (arr, color, w) => {
+      let d="", pen=false;
+      arr.forEach((p,i)=>{ if(!p){pen=false;return;} d += `${pen?"L":"M"}${x(i).toFixed(1)},${y(p.r).toFixed(1)}`; pen=true; });
+      svg.append(s("path",{d,fill:"none",stroke:color,"stroke-width":w,"stroke-linejoin":"round","stroke-linecap":"round"}));
+    };
+    linea(tot, "var(--axis)", 1.5);
+    linea(sr.pts, GCOLOR[sr.g], 2);
+    sr.pts.forEach((p,i)=>{ if(p) svg.append(s("circle",{cx:x(i),cy:y(p.r),r:3.5,fill:GCOLOR[sr.g],stroke:"var(--surface-1)","stroke-width":2})); });
+    const cross = s("line",{y1:m.t,y2:H-m.b,stroke:"var(--axis)",visibility:"hidden"}); svg.append(cross);
+    const hit = s("rect",{x:m.l,y:0,width:W-m.l-m.r,height:H,fill:"transparent"});
+    hit.addEventListener("pointermove", ev => {
+      const bb = svg.getBoundingClientRect(), px = (ev.clientX-bb.left)*W/bb.width;
+      const i = Math.max(0,Math.min(meses.length-1,Math.round(x.inv(px))));
+      cross.setAttribute("x1",x(i)); cross.setAttribute("x2",x(i)); cross.setAttribute("visibility","visible");
+      const p = sr.pts[i], t = tot[i];
+      mostrarTip(ev, `${sr.g} · ${MESES[meses[i]-1]} ${est.anio}`, [
+        [sr.g, p?pct(p.r):"sin producción", GCOLOR[sr.g]],
+        ["Total seleccionado", t?pct(t.r):"—", "var(--axis)"],
+        ["Meta", p?pct(p.meta):"—"],
+        ["Kg producidos", p?kg(p.kp):"—"],
+        ["Órdenes", p?nf0.format(p.cnt):"0"],
+      ]);
+    });
+    hit.addEventListener("pointerleave", ()=>{cross.setAttribute("visibility","hidden"); ocultarTip();});
+    svg.append(hit);
+    card.append(svg);
+    cont.append(card);
+  });
+}
+
+// ---------- volumen apilado ----------
+function renderVolumen() {
+  const cont = document.getElementById("vol"); cont.replaceChildren();
+  const ley = document.getElementById("vol-ley"); ley.replaceChildren();
+  const v = filtrar(VALIDAS);
+  const meses = []; for (let mm=est.desde; mm<=est.hasta; mm++) meses.push(mm);
+  const gs = GRUPOS.filter(g => v.some(x=>x.grupo===g));
+  gs.forEach(g => { const sp = el("span"); const k = el("i",{class:"k-rect"}); k.style.background=GCOLOR[g]; sp.append(k, document.createTextNode(g)); ley.append(sp); });
+  if (!v.length) { cont.append(el("div",{class:"vacio"},"Sin datos.")); return; }
+  const pm = agrupar(v, x=>x.mes);
+  const datos = meses.map(mm => { const l = pm.get(mm)||[]; const pg = agrupar(l,x=>x.grupo); return { mm, tot: agregar(l).kp, seg: gs.map(g=>({g, kp: pg.has(g)?agregar(pg.get(g)).kp:0})) }; });
+  const W = anchoDe(cont,560), H = 260, m = {t:16,r:8,b:26,l:52};
+  const max = Math.max(...datos.map(d=>d.tot)) || 1;
+  const y = escala(0, max*1.08, H-m.b, m.t);
+  const banda = (W-m.l-m.r)/meses.length, bw = Math.min(28, banda*0.6);
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Kg producidos por mes"});
+  ticks(0,max*1.08,4).forEach(t=>{ svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y(t),y2:y(t),stroke:"var(--grid)"})); svg.append(s("text",{x:m.l-6,y:y(t)+4,"text-anchor":"end"}, t>=1e6? nf1.format(t/1e6)+"M" : nf0.format(t/1e3)+"k")); });
+  datos.forEach((d,i) => {
+    const cx = m.l + banda*(i+0.5);
+    let acc = 0;
+    const visibles = d.seg.filter(sg=>sg.kp>0);
+    visibles.forEach((sg,j) => {
+      const yTop = y(acc+sg.kp), yBot = y(acc);
+      const h = Math.max(0, yBot - yTop - (j>0?2:0));
+      const top = j===visibles.length-1;
+      const x0 = cx-bw/2, r = top ? Math.min(4,h) : 0;
+      const path = top
+        ? `M${x0},${yBot - (j>0?2:0)}V${yTop+r}Q${x0},${yTop} ${x0+r},${yTop}H${x0+bw-r}Q${x0+bw},${yTop} ${x0+bw},${yTop+r}V${yBot-(j>0?2:0)}Z`
+        : `M${x0},${yBot-(j>0?2:0)}V${yTop}H${x0+bw}V${yBot-(j>0?2:0)}Z`;
+      if (h>0) svg.append(s("path",{d:path,fill:GCOLOR[sg.g]}));
+      acc += sg.kp;
+    });
+    if (d.tot) { const t = s("text",{x:cx,y:y(d.tot)-5,"text-anchor":"middle"}, nf0.format(d.tot/1e3)+" t"); svg.append(t); }
+    svg.append(s("text",{x:cx,y:H-8,"text-anchor":"middle"},MESES[d.mm-1]));
+    const hit = s("rect",{x:cx-banda/2,y:m.t,width:banda,height:H-m.t-m.b,fill:"transparent"});
+    hit.addEventListener("pointermove", ev => mostrarTip(ev, `${MESES[d.mm-1]} ${est.anio} · ${kg(d.tot)}`,
+      d.seg.filter(sg=>sg.kp).sort((a,b)=>b.kp-a.kp).map(sg=>[sg.g, kg(sg.kp), GCOLOR[sg.g]])));
+    hit.addEventListener("pointerleave", ocultarTip);
+    svg.append(hit);
+  });
+  svg.append(s("line",{x1:m.l,x2:W-m.r,y1:H-m.b,y2:H-m.b,stroke:"var(--axis)"}));
+  cont.append(svg);
+}
+
+// ---------- resumen por grupo ----------
+function renderGrupos() {
+  const cont = document.getElementById("grupos"); cont.replaceChildren();
+  const v = filtrar(VALIDAS, {sinProd:true});
+  const pg = agrupar(v, x=>x.grupo);
+  const exc = agrupar(filtrar(EXCLUIDAS,{sinProd:true}), x=>x.grupo);
+  const filas = GRUPOS.filter(g=>est.grupos.has(g)).map(g => ({ g, ...(pg.has(g)?agregar(pg.get(g)):{kp:0,kc:0,cnt:0,r:null,meta:null}), ex:(exc.get(g)||[]).length }))
+    .sort((a,b)=>b.kp-a.kp);
+  const t = el("table"), tr = el("tr");
+  ["Grupo","Kg producidos","Órdenes","Rend. met.","Meta","vs meta","Excl."].forEach((h,i)=>tr.append(el("th",{class:i?"n":""},h)));
+  const th = el("thead"); th.append(tr); t.append(th);
+  const tb = el("tbody");
+  filas.forEach(f => {
+    const r = el("tr"); const c0 = el("td"); const k = el("i",{class:"k-dot",style:"margin-right:6px"}); k.style.background=GCOLOR[f.g];
+    c0.append(k, document.createTextNode(f.g)); r.append(c0);
+    const dif = f.r!=null&&f.meta!=null ? f.r-f.meta : null;
+    [nf0.format(f.kp), nf0.format(f.cnt), pct(f.r), pct(f.meta), dif==null?"—":(dif>=0?"▲ +":"▼ ")+nf2.format(dif)+" pp", f.ex||"—"]
+      .forEach((val,i)=>r.append(el("td",{class:"n"+(i===4&&dif!=null?(dif>=0?" delta-pos":" delta-neg"):"")},val)));
+    tb.append(r);
+  });
+  t.append(tb);
+  const w = el("div",{class:"tabla-wrap"}); w.append(t); cont.append(w);
+  cont.append(el("p",{class:"nota"},"Estrella no registra órdenes en el período. Barra traspaso de carga se agrupa en Redondo liso; los productos SEMI se unifican con su equivalente."));
+}
+
+// ---------- ranking ----------
+function renderRanking() {
+  const cont = document.getElementById("ranking"); cont.replaceChildren();
+  const v = filtrar(VALIDAS, {sinProd:true});
+  const pp = agrupar(v, x=>x.p.n);
+  let filas = [...pp.entries()].map(([n,l]) => ({ n, p:l[0].p, ...agregar(l) }));
+  filas.sort(est.orden==="kg" ? (a,b)=>b.kp-a.kp : (a,b)=>b.r-a.r);
+  if (!filas.length) { cont.append(el("div",{class:"vacio"},"Sin datos.")); return; }
+  const W = anchoDe(cont), rowH = 26, top = 34;
+  const colNom = Math.min(360, W*0.40), colKg = Math.min(200, W*0.2), gap = 16;
+  const xKg0 = colNom + 8, xR0 = xKg0 + colKg + gap + 44, xR1 = W - 50;
+  const maxKg = Math.max(...filas.map(f=>f.kp));
+  const rs = filas.map(f=>f.r).concat(filas.map(f=>f.meta).filter(Boolean));
+  const r0 = Math.max(0, Math.floor(Math.min(...rs)-0.5)), r1 = Math.min(100, Math.ceil(Math.max(...rs)+0.5));
+  const xr = escala(r0, r1, xR0, xR1), xk = escala(0, maxKg, xKg0, xKg0+colKg);
+  const H = top + filas.length*rowH + 4;
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Ranking de productos"});
+  const hdr = (x, txt, anchor) => { const t = s("text",{x, y:12, "text-anchor":anchor||"start"}, txt); t.style.fontWeight="600"; t.style.fill="var(--text-secondary)"; svg.append(t); };
+  hdr(0,"Producto"); hdr(xKg0,"Kg producidos"); hdr(xR0,"Rend. met. (%)");
+  ticks(r0,r1,4).forEach(t => { svg.append(s("line",{x1:xr(t),x2:xr(t),y1:top-4,y2:H,stroke:"var(--grid)"})); svg.append(s("text",{x:xr(t),y:top-8,"text-anchor":"middle"},nf0.format(t))); });
+  filas.forEach((f,i) => {
+    const yc = top + i*rowH + rowH/2;
+    const g = s("g",{class:"rank-row",tabindex:0});
+    g.append(s("rect",{class:"hit",x:0,y:yc-rowH/2,width:W,height:rowH,fill: f.n===est.prod ? "var(--aza-rojo-suave)" : "transparent"}));
+    const nombre = `${i+1}. ${f.p.grupo} ${f.p.desc}`;
+    const t = s("text",{x:0,y:yc+4}, nombre); t.style.fill="var(--text-primary)"; t.style.fontSize="12px";
+    const calidad = f.n.replace(/^.*?(A\d|SAE|ASTM|COM|A 36|A36)/,"$1");
+    const t2 = s("tspan",{dx:6}, calidad.length<40?calidad:""); t2.style.fill="var(--text-muted)"; t.append(t2);
+    g.append(t);
+    // recorte simple si no cabe
+    g.append(s("rect",{x:xKg0,y:yc-5,width:Math.max(1,xk(f.kp)-xKg0),height:10,rx:2,fill:"var(--text-muted)",opacity:.55}));
+    g.append(s("text",{x:xk(f.kp)+4,y:yc+4}, nf0.format(f.kp/1e3)+" t"));
+    if (f.meta) g.append(s("line",{x1:xr(f.meta),x2:xr(f.meta),y1:yc-7,y2:yc+7,stroke:"var(--meta)","stroke-width":2}));
+    g.append(s("circle",{cx:xr(f.r),cy:yc,r:5,fill:GCOLOR[f.p.grupo],stroke:"var(--surface-1)","stroke-width":2}));
+    const tv = s("text",{x:W-4,y:yc+4,"text-anchor":"end"}, nf2.format(f.r)); tv.style.fill="var(--text-primary)"; g.append(tv);
+    g.addEventListener("pointermove", ev => mostrarTip(ev, f.n, [
+      ["Grupo", f.p.grupo, GCOLOR[f.p.grupo]],
+      ["Medidas", f.p.desc + (f.p.pulgadas ? ` (${f.p.pulgadas})` : "")],
+      ["Formato (maestro)", f.p.formato || "no está en el maestro"],
+      ["Rend. met.", pct(f.r)], ["Meta", pct(f.meta)],
+      ["Kg producidos", kg(f.kp)], ["Kg consumidos", kg(f.kc)], ["Órdenes", nf0.format(f.cnt)],
+    ]));
+    g.addEventListener("pointerleave", ocultarTip);
+    const elegir = () => { est.prod = est.prod===f.n ? "" : f.n; render(); };
+    g.addEventListener("click", elegir);
+    g.addEventListener("keydown", e => { if (e.key==="Enter"||e.key===" ") { e.preventDefault(); elegir(); } });
+    svg.append(g);
+  });
+  cont.append(svg);
+  // recortar nombres que invaden la columna de kg
+  svg.querySelectorAll("g.rank-row > text:first-of-type").forEach(t => {
+    const tsp = t.querySelector("tspan");
+    if (t.getComputedTextLength() > colNom) { if (tsp) tsp.textContent = ""; }
+    let txt = t.firstChild.textContent;
+    while (t.getComputedTextLength() > colNom && txt.length > 8) { txt = txt.slice(0,-2); t.firstChild.textContent = txt + "…"; }
+  });
+}
+
+// ---------- mapa de calor ----------
+function mezcla(c1, c2, t) {
+  const h = c => [1,3,5].map(i=>parseInt(c.slice(i,i+2),16));
+  const a = h(c1), b = h(c2);
+  return "#"+a.map((v,i)=>Math.round(v+(b[i]-v)*t).toString(16).padStart(2,"0")).join("");
+}
+function renderHeat() {
+  const cont = document.getElementById("heat"); cont.replaceChildren();
+  const ley = document.getElementById("heat-ley"); ley.replaceChildren();
+  const cs = getComputedStyle(document.documentElement);
+  const cNeg = cs.getPropertyValue("--div-neg").trim(), cMid = cs.getPropertyValue("--div-mid").trim(), cPos = cs.getPropertyValue("--div-pos").trim();
+  const LIM = 4;
+  const color = d => d>=0 ? mezcla(cMid,cPos,Math.min(1,d/LIM)) : mezcla(cMid,cNeg,Math.min(1,-d/LIM));
+  [-4,-2,-1,0,1,2,4].forEach(d => { const sp = el("span"); const k = el("i",{class:"k-rect"}); k.style.background=color(d); sp.append(k, document.createTextNode((d>0?"+":"")+d+(Math.abs(d)===4?"+":"")+" pp")); ley.append(sp); });
+  const v = filtrar(VALIDAS, {sinProd:true});
+  const pp = agrupar(v, x=>x.p.n);
+  const filas = [...pp.entries()].map(([n,l])=>({n,p:l[0].p,l,...agregar(l)})).sort(est.orden==="kg"?(a,b)=>b.kp-a.kp:(a,b)=>b.r-a.r).slice(0,30);
+  if (!filas.length) { cont.append(el("div",{class:"vacio"},"Sin datos.")); return; }
+  const meses = []; for (let mm=est.desde; mm<=est.hasta; mm++) meses.push(mm);
+  const W0 = anchoDe(cont), colNom = Math.min(300, W0*0.38);
+  const cw = Math.max(34, Math.min(70, (W0-colNom-10)/meses.length)), ch = 22;
+  const W = colNom + cw*meses.length + 4, H = 20 + filas.length*ch;
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Mapa de calor producto por mes"});
+  meses.forEach((mm,j)=>svg.append(s("text",{x:colNom+cw*j+cw/2,y:12,"text-anchor":"middle"},MESES[mm-1])));
+  filas.forEach((f,i) => {
+    const yy = 20 + i*ch;
+    const t = s("text",{x:0,y:yy+ch/2+4}, `${f.p.grupo} ${f.p.desc}`); t.style.fill="var(--text-primary)"; t.style.fontSize="12px"; svg.append(t);
+    const pm = agrupar(f.l, x=>x.mes);
+    meses.forEach((mm,j) => {
+      const x0 = colNom + cw*j;
+      if (!pm.has(mm)) { svg.append(s("rect",{x:x0+1,y:yy+1,width:cw-2,height:ch-2,rx:3,fill:"none",stroke:"var(--grid)"})); return; }
+      const a = agregar(pm.get(mm)); const d = a.meta!=null ? a.r - a.meta : 0;
+      const fill = color(d);
+      const rc = s("rect",{x:x0+1,y:yy+1,width:cw-2,height:ch-2,rx:3,fill});
+      svg.append(rc);
+      if (cw >= 44) {
+        const lum = (()=>{ const c=[1,3,5].map(k=>parseInt(fill.slice(k,k+2),16)/255); return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; })();
+        const tx = s("text",{x:x0+cw/2,y:yy+ch/2+4,"text-anchor":"middle"}, nf1.format(a.r)); tx.style.fill = lum>0.45?"#0b0b0b":"#ffffff"; tx.style.fontSize="10.5px"; tx.style.pointerEvents="none"; svg.append(tx);
+      }
+      rc.addEventListener("pointermove", ev => mostrarTip(ev, `${f.n} · ${MESES[mm-1]}`, [
+        ["Rend. met.", pct(a.r)], ["Meta", pct(a.meta)], ["vs meta", (d>=0?"+":"")+nf2.format(d)+" pp"], ["Kg producidos", kg(a.kp)], ["Órdenes", nf0.format(a.cnt)] ]));
+      rc.addEventListener("pointerleave", ocultarTip);
+    });
+  });
+  cont.append(svg);
+  svg.querySelectorAll(":scope > text").forEach(t => { if (+t.getAttribute("x")!==0) return; let txt=t.textContent; while (t.getComputedTextLength()>colNom-8 && txt.length>8){ txt=txt.slice(0,-2); t.textContent=txt+"…"; } });
+}
+
+// ---------- órdenes a corregir ----------
+function renderCorregir() {
+  const cont = document.getElementById("corregir"); cont.replaceChildren();
+  const exc = filtrar(EXCLUIDAS).sort((a,b)=>b.r-a.r);
+  if (!exc.length) { cont.append(el("div",{class:"vacio"},"No hay órdenes sobre 100 % con estos filtros.")); return; }
+  const t = el("table"), tr = el("tr");
+  ["Orden","Fecha inicio","Grupo","Producto","Kg producidos","Kg consumidos","Diferencia (kg)","Rend. met."].forEach((h,i)=>tr.append(el("th",{class:i>=4?"n":""},h)));
+  const th = el("thead"); th.append(tr); t.append(th);
+  const tb = el("tbody");
+  exc.forEach(x => {
+    const r = el("tr");
+    [x.o, fecha(x.d), x.grupo, x.p.n, nf0.format(x.kp), nf0.format(x.kc), nf0.format(x.kp-x.kc), pct(x.r)]
+      .forEach((v,i)=>r.append(el("td",{class:(i>=4?"n":"")+(i===7?" alerta":"")},v)));
+    tb.append(r);
+  });
+  t.append(tb); cont.append(t);
+}
+
+// ---------- render ----------
+function render() {
+  syncFiltros();
+  renderKPIs(); renderCarta(); renderMultiples(); renderVolumen(); renderGrupos(); renderRanking(); renderHeat(); renderCorregir();
+}
+initFiltros();
+render();
+let rT; addEventListener("resize", () => { clearTimeout(rT); rT = setTimeout(render, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", render);
+</script>
+</body>
+</html>

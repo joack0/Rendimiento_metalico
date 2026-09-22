@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rendimiento Metálico</title>
+<style>
+:root {
+  color-scheme: light;
+  --aza-rojo: #c8102e;
+  --aza-rojo-suave: #fbe9ec;
+  --aza-grafito: #2b2b2b;
+  --page: #f5f5f3;
+  --surface-1: #ffffff;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #6f6e69;
+  --grid: #e8e7e1;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --hover: rgba(11,11,11,0.04);
+  --serie-proceso: #2b2b2b;
+  --limite: #c8102e;
+  --centro: #898781;
+  --meta: #1baf7a;
+  --critical: #d03b3b;
+  --good: #0ca30c;
+  --div-neg: #d03b3b;
+  --div-mid: #f0efec;
+  --div-pos: #2a78d6;
+  --g1: #2a78d6; --g2: #eb6834; --g3: #1baf7a; --g4: #eda100;
+  --g5: #e87ba4; --g6: #008300; --g7: #4a3aa7; --g8: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --aza-rojo: #e8354b;
+    --aza-rojo-suave: #3a1a1f;
+    --aza-grafito: #0d0d0d;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #9a9890;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --hover: rgba(255,255,255,0.06);
+    --serie-proceso: #e6e5df;
+    --limite: #e8354b;
+    --centro: #898781;
+    --meta: #199e70;
+    --div-mid: #383835;
+    --div-pos: #3987e5;
+    --div-neg: #e66767;
+    --g1: #3987e5; --g2: #d95926; --g3: #199e70; --g4: #c98500;
+    --g5: #d55181; --g6: #008300; --g7: #9085e9; --g8: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --aza-rojo: #e8354b;
+  --aza-rojo-suave: #3a1a1f;
+  --aza-grafito: #0d0d0d;
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #9a9890;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --hover: rgba(255,255,255,0.06);
+  --serie-proceso: #e6e5df;
+  --limite: #e8354b;
+  --centro: #898781;
+  --meta: #199e70;
+  --div-mid: #383835;
+  --div-pos: #3987e5;
+  --div-neg: #e66767;
+  --g1: #3987e5; --g2: #d95926; --g3: #199e70; --g4: #c98500;
+  --g5: #d55181; --g6: #008300; --g7: #9085e9; --g8: #e66767;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--text-primary);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+header {
+  background: var(--aza-grafito); color: #fff;
+  border-bottom: 4px solid var(--aza-rojo);
+  padding: 18px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+header h1 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: .2px; }
+header p { margin: 2px 0 0; color: #c9c8c2; font-size: 12.5px; }
+.marca { display: flex; align-items: center; gap: 12px; }
+.marca-bloque { width: 10px; height: 34px; background: var(--aza-rojo); border-radius: 2px; }
+#tema { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: 12.5px; }
+main { max-width: 1320px; margin: 0 auto; padding: 16px 24px 48px; }
+
+.filtros {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--page); padding: 12px 0;
+  display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end;
+  border-bottom: 1px solid var(--border);
+}
+.filtro { display: flex; flex-direction: column; gap: 4px; }
+.filtro > span { font-size: 11.5px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+select {
+  font: inherit; color: var(--text-primary); background: var(--surface-1);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; min-height: 34px; max-width: 320px;
+}
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--surface-1); }
+.seg button { font: inherit; border: 0; background: transparent; color: var(--text-secondary); padding: 6px 12px; min-height: 34px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--aza-rojo); color: #fff; font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+  border-radius: 999px; padding: 5px 11px; min-height: 32px; cursor: pointer;
+}
+.chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.chip[aria-pressed="true"] { color: var(--text-primary); border-color: var(--text-primary); font-weight: 600; }
+.chip[aria-pressed="false"] i { opacity: .35; }
+.chip:disabled { opacity: .45; cursor: default; }
+.btn-link { font: inherit; font-size: 12.5px; background: none; border: 0; color: var(--aza-rojo); cursor: pointer; padding: 4px 2px; text-decoration: underline; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0; }
+.kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.kpi.hero { border-top: 3px solid var(--aza-rojo); }
+.kpi .lbl { font-size: 12.5px; color: var(--text-secondary); }
+.kpi .val { font-size: 26px; font-weight: 650; margin-top: 2px; }
+.kpi.hero .val { font-size: 36px; line-height: 1.1; white-space: nowrap; }
+.kpi.hero { grid-column: span 2; }
+.kpi .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.delta-pos { color: #006300; } .delta-neg { color: var(--critical); }
+:root[data-theme="dark"] .delta-pos { color: var(--good); }
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .delta-pos { color: var(--good); } }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 960px) { .grid2 { grid-template-columns: 1fr; } }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; min-width: 0; }
+.card h2 { font-size: 15.5px; margin: 0; font-weight: 650; }
+.card .desc { color: var(--text-secondary); font-size: 12.5px; margin: 3px 0 10px; }
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-secondary); margin: 6px 0; }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.k-line { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+.k-dash { width: 16px; height: 0; border-top: 2px dashed; display: inline-block; }
+.k-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.k-rect { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+svg { display: block; overflow: visible; }
+svg text { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.vacio { color: var(--text-muted); padding: 30px 0; text-align: center; }
+
+.tabla-wrap { overflow-x: auto; max-height: 460px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { position: sticky; top: 0; background: var(--surface-1); color: var(--text-secondary); font-weight: 600; z-index: 1; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:hover { background: var(--hover); }
+.alerta { color: var(--critical); font-weight: 600; }
+details summary { cursor: pointer; color: var(--text-secondary); font-size: 12.5px; margin-top: 8px; }
+
+.rank-row { cursor: pointer; }
+.rank-row:hover rect.hit { fill: var(--hover); }
+.nota { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+#tip {
+  position: fixed; pointer-events: none; z-index: 20; display: none;
+  background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.15); font-size: 12.5px; max-width: 320px;
+}
+#tip .t { color: var(--text-secondary); margin-bottom: 4px; }
+#tip .r { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+#tip .r b { font-variant-numeric: tabular-nums; }
+#tip .r span { color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 600px) {
+  header, main { padding-left: 16px; padding-right: 16px; }
+  .kpi.hero .val { font-size: 32px; }
+  .kpi.hero { grid-column: auto; }
+  .filtros { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="marca">
+    <div class="marca-bloque"></div>
+    <div>
+      <h1>Rendimiento metálico — carta de control</h1>
+      <p id="subtitulo"></p>
+    </div>
+  </div>
+  <button id="tema" type="button">Cambiar tema</button>
+</header>
+<main>
+  <section class="filtros" aria-label="Filtros">
+    <label class="filtro"><span>Año</span><select id="f-anio"></select></label>
+    <label class="filtro"><span>Desde</span><select id="f-desde"></select></label>
+    <label class="filtro"><span>Hasta</span><select id="f-hasta"></select></label>
+    <div class="filtro"><span>Vista</span>
+      <div class="seg" id="f-vista">
+        <button type="button" data-v="dia">Diaria</button>
+        <button type="button" data-v="mes">Mensual</button>
+        <button type="button" data-v="anio">Anual</button>
+      </div>
+    </div>
+    <div class="filtro"><span>Grupo <button class="btn-link" id="g-todos" type="button">todos</button></span><div class="chips" id="f-grupos"></div></div>
+    <label class="filtro"><span>Producto</span><select id="f-prod"></select></label>
+  </section>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2 id="cc-titulo">Carta de control</h2>
+        <p class="desc" id="cc-desc"></p>
+      </div>
+    </div>
+    <div class="leyenda">
+      <span><i class="k-line" style="border-color:var(--serie-proceso)"></i>Rend. met. (Σ kg prod / Σ kg cons)</span>
+      <span><i class="k-line" style="border-color:var(--centro)"></i>Línea central (LC)</span>
+      <span><i class="k-line" style="border-color:var(--limite)"></i>Límites ±3σ (LCS / LCI)</span>
+      <span><i class="k-dash" style="border-color:var(--meta)"></i>Meta ponderada</span>
+      <span><i class="k-dot" style="background:var(--critical)"></i>▲▼ Fuera de control</span>
+    </div>
+    <div id="cc"></div>
+    <div class="nota" id="cc-nota"></div>
+    <details><summary>Ver tabla de la carta</summary><div class="tabla-wrap" id="cc-tabla" style="margin-top:8px"></div></details>
+  </section>
+
+  <section class="card">
+    <h2>Rendimiento mensual por grupo</h2>
+    <p class="desc">Una gráfica por grupo, misma escala. La línea gris es el total de los grupos seleccionados.</p>
+    <div id="multiples" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Kg producidos por mes</h2>
+      <p class="desc">Volumen de las órdenes válidas, apilado por grupo.</p>
+      <div class="leyenda" id="vol-ley"></div>
+      <div id="vol"></div>
+    </section>
+    <section class="card">
+      <h2>Resumen por grupo</h2>
+      <p class="desc">Rendimiento del período, ordenado de mayor a menor volumen.</p>
+      <div id="grupos"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Ranking de productos</h2>
+        <p class="desc">Haz clic en un producto para filtrar todo el dashboard. <b>*</b> largo asumido (no está en el maestro ni en el nombre).</p>
+      </div>
+      <div class="filtro"><span>Ordenar por</span>
+        <div class="seg" id="f-orden">
+          <button type="button" data-v="kg">Kg producidos</button>
+          <button type="button" data-v="rend">Rendimiento</button>
+        </div>
+      </div>
+    </div>
+    <div class="leyenda">
+      <span><i class="k-rect" style="background:var(--text-muted)"></i>Kg producidos</span>
+      <span><i class="k-dot" style="background:var(--g1)"></i>Rend. met. (color del grupo)</span>
+      <span><i class="k-line" style="border-color:var(--meta);width:2px;height:12px;border-top:0;border-left:2px solid var(--meta)"></i>Meta</span>
+    </div>
+    <div id="ranking" style="max-height:620px;overflow-y:auto"></div>
+  </section>
+
+  <section class="card">
+    <h2>Mapa de calor: producto × mes</h2>
+    <p class="desc">Diferencia del rendimiento contra la meta (puntos porcentuales). Azul = sobre la meta, rojo = bajo la meta. Se muestran los 30 productos de mayor volumen del filtro.</p>
+    <div class="leyenda" id="heat-ley"></div>
+    <div id="heat" style="overflow-x:auto"></div>
+  </section>
+
+  <section class="card">
+    <h2>Órdenes a corregir (rendimiento &gt; 100 %)</h2>
+    <p class="desc">Excluidas de todos los cálculos: producir más kg de los consumidos no es físicamente posible (consumo mal imputado o ajuste de mes). Se muestran según los filtros activos.</p>
+    <div class="tabla-wrap" id="corregir"></div>
+  </section>
+</main>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const DATOS = {"generado":"2026-09-22 19:34","fuente":"Consumo_lotes_de_produccion.csv","maestro":"Datos_productos.xlsx","sin_maestro":["B HORMIGON R 32MM 12M A630-420HS (N)","HEXAGONO 1 1/8' 8MM SAE 1045 (N)","PLANA 1\"X1/8\" X 7,315m ASTM A36 (P)","PLANA 75X12MM 6M A270ES","REDONDO LISO 1' 6M A615 GR60(P)"],"productos":[{"n":"ANG 45X45X4MM 12M ASTM A572 T2 (N)","grupo":"Ángulo","diametro":null,"ancho":45.0,"espesor":4.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 45 x 5","codigo":119502813,"desc":"45×45×4 mm · 12 m"},{"n":"ANG 50X50X4MM 12M ASTM A572 T2 (N)","grupo":"Ángulo","diametro":null,"ancho":50.0,"espesor":4.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 50 x 4","codigo":119502814,"desc":"50×50×4 mm · 12 m"},{"n":"ANG 50X50X5MM 12M ASTM A572 T2 (N)","grupo":"Ángulo","diametro":null,"ancho":50.0,"espesor":5.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 50 x 5","codigo":119502815,"desc":"50×50×5 mm · 12 m"},{"n":"ANG 60X60X5MM 12M ASTM A572 T2 (N)","grupo":"Ángulo","diametro":null,"ancho":60.0,"espesor":5.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 60 x 5","codigo":119502816,"desc":"60×60×5 mm · 12 m"},{"n":"ANG 60X60X6MM 12M ASTM A572 T2 (N)","grupo":"Ángulo","diametro":null,"ancho":60.0,"espesor":6.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 60 x 6","codigo":119502944,"desc":"60×60×6 mm · 12 m"},{"n":"ANG 65X65X5MM 12M ASTM A572 T2 (N)","grupo":"Ángulo","diametro":null,"ancho":65.0,"espesor":5.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 65 x 5","codigo":119502817,"desc":"65×65×5 mm · 12 m"},{"n":"ANG 75X75X6MM 12M ASTM A572 T2 (N)","grupo":"Ángulo","diametro":null,"ancho":75.0,"espesor":6.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 75 x 6","codigo":119502820,"desc":"75×75×6 mm · 12 m"},{"n":"ANG 80X80X6MM 12M ASTM A572 T2 (N)","grupo":"Ángulo","diametro":null,"ancho":80.0,"espesor":6.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 80 x 6","codigo":119502821,"desc":"80×80×6 mm · 12 m"},{"n":"ANGULO 20X20X3MM A270ES","grupo":"Ángulo","diametro":null,"ancho":20.0,"espesor":3.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 20 x 3","codigo":106501016,"desc":"20×20×3 mm · 12 m"},{"n":"ANGULO 25X25X3MM A270ES","grupo":"Ángulo","diametro":null,"ancho":25.0,"espesor":3.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 25 x 3","codigo":106501017,"desc":"25×25×3 mm · 12 m"},{"n":"ANGULO 25X25X5MM A270ES","grupo":"Ángulo","diametro":null,"ancho":25.0,"espesor":5.0,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 25 x 5","codigo":106501812,"desc":"25×25×5 mm · 12 m"},{"n":"ANGULO 30X30X3MM A270ES","grupo":"Ángulo","diametro":null,"ancho":30.0,"espesor":3.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 30 x 3","codigo":106501029,"desc":"30×30×3 mm · 6 m"},{"n":"ANGULO 30X30X5MM A270ES","grupo":"Ángulo","diametro":null,"ancho":30.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 30 x 5","codigo":106501813,"desc":"30×30×5 mm · 6 m"},{"n":"ANGULO 40X40X3MM 6M A36 (AL)","grupo":"Ángulo","diametro":null,"ancho":40.0,"espesor":3.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 40 X 3","codigo":119502602,"desc":"40×40×3 mm · 6 m"},{"n":"ANGULO 40X40X3MM A270ES","grupo":"Ángulo","diametro":null,"ancho":40.0,"espesor":3.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 40 x 3","codigo":106501033,"desc":"40×40×3 mm · 6 m"},{"n":"ANGULO 40X40X4MM A270ES","grupo":"Ángulo","diametro":null,"ancho":40.0,"espesor":4.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 40 x 4","codigo":106501034,"desc":"40×40×4 mm · 6 m"},{"n":"ANGULO 40X40X5MM A270ES","grupo":"Ángulo","diametro":null,"ancho":40.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 40 x 5","codigo":106501035,"desc":"40×40×5 mm · 6 m"},{"n":"ANGULO 50X50X3MM A270ES","grupo":"Ángulo","diametro":null,"ancho":50.0,"espesor":3.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 50 x 3","codigo":106501038,"desc":"50×50×3 mm · 6 m"},{"n":"ANGULO 50X50X4MM A270ES","grupo":"Ángulo","diametro":null,"ancho":50.0,"espesor":4.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 50 x 4","codigo":106501036,"desc":"50×50×4 mm · 6 m"},{"n":"ANGULO 50X50X5MM A270ES","grupo":"Ángulo","diametro":null,"ancho":50.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 50 x 5","codigo":106501037,"desc":"50×50×5 mm · 6 m"},{"n":"ANGULO 50X50X6MM A270ES","grupo":"Ángulo","diametro":null,"ancho":50.0,"espesor":6.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 50 x 6","codigo":106501044,"desc":"50×50×6 mm · 6 m"},{"n":"ANGULO 65X65X10MM A270ES","grupo":"Ángulo","diametro":null,"ancho":65.0,"espesor":10.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 65 x 10","codigo":106501052,"desc":"65×65×10 mm · 6 m"},{"n":"ANGULO 65X65X5MM A270ES","grupo":"Ángulo","diametro":null,"ancho":65.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 65 x 5","codigo":106501053,"desc":"65×65×5 mm · 6 m"},{"n":"ANGULO 65X65X6MM A270ES","grupo":"Ángulo","diametro":null,"ancho":65.0,"espesor":6.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 65 x 6","codigo":106501057,"desc":"65×65×6 mm · 6 m"},{"n":"ANGULO 65X65X8MM A270ES","grupo":"Ángulo","diametro":null,"ancho":65.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 65 x 8","codigo":106501051,"desc":"65×65×8 mm · 6 m"},{"n":"ANGULO 80X80X10MM A270ES","grupo":"Ángulo","diametro":null,"ancho":80.0,"espesor":10.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 80 x 10","codigo":106501048,"desc":"80×80×10 mm · 6 m"},{"n":"ANGULO 80X80X12MM A270ES","grupo":"Ángulo","diametro":null,"ancho":80.0,"espesor":12.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 80 x 12","codigo":106501046,"desc":"80×80×12 mm · 6 m"},{"n":"ANGULO 80X80X6MM A270ES","grupo":"Ángulo","diametro":null,"ancho":80.0,"espesor":6.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 80 x 6","codigo":106501050,"desc":"80×80×6 mm · 6 m"},{"n":"ANGULO 80X80X8MM 12m A270ES","grupo":"Ángulo","diametro":null,"ancho":80.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 80 x 8","codigo":119502262,"desc":"80×80×8 mm · 6 m"},{"n":"ANGULO 80X80X8MM A270ES","grupo":"Ángulo","diametro":null,"ancho":80.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"ANG 80 x 8","codigo":106501049,"desc":"80×80×8 mm · 6 m"},{"n":"B HORMIGON 16MM 6M A630-420H (N)","grupo":"B Hormigón","diametro":16.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 16 CR","codigo":110002928,"desc":"Ø16 mm · 6 m"},{"n":"B HORMIGON 18MM 10M A630-420H (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110002924,"desc":"Ø18 mm · 10 m"},{"n":"B HORMIGON 18MM 10M A630-420HS (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110007323,"desc":"Ø18 mm · 10 m"},{"n":"B HORMIGON 18MM 11M A630-420H (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110002937,"desc":"Ø18 mm · 11 m"},{"n":"B HORMIGON 18MM 11M A630-420HS (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110007314,"desc":"Ø18 mm · 11 m"},{"n":"B HORMIGON 18MM 12M A630-420H (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110002938,"desc":"Ø18 mm · 12 m"},{"n":"B HORMIGON 18MM 12M A630-420HS (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110007120,"desc":"Ø18 mm · 12 m"},{"n":"B HORMIGON 18MM 6M A630-420H (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110002942,"desc":"Ø18 mm · 6 m"},{"n":"B HORMIGON 18MM 7M A630-420H (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":7.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110002940,"desc":"Ø18 mm · 7 m"},{"n":"B HORMIGON 18MM 7M A630-420HS (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":7.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110007351,"desc":"Ø18 mm · 7 m"},{"n":"B HORMIGON 18MM 8M A630-420H (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":8.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110002952,"desc":"Ø18 mm · 8 m"},{"n":"B HORMIGON 18MM 9M A630-420H (N)","grupo":"B Hormigón","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":9.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18 CR","codigo":110002951,"desc":"Ø18 mm · 9 m"},{"n":"B HORMIGON 22MM 10M A630-420H (N)","grupo":"B Hormigón","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 22 CR","codigo":110002950,"desc":"Ø22 mm · 10 m"},{"n":"B HORMIGON 22MM 10M A630-420HS (N)","grupo":"B Hormigón","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 22 CR","codigo":110007124,"desc":"Ø22 mm · 10 m"},{"n":"B HORMIGON 22MM 11M A630-420H (N)","grupo":"B Hormigón","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 22 CR","codigo":110002949,"desc":"Ø22 mm · 11 m"},{"n":"B HORMIGON 22MM 11M A630-420HS (N)","grupo":"B Hormigón","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 22 CR","codigo":110007127,"desc":"Ø22 mm · 11 m"},{"n":"B HORMIGON 22MM 12M A630-420H (N)","grupo":"B Hormigón","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 22 CR","codigo":110002948,"desc":"Ø22 mm · 12 m"},{"n":"B HORMIGON 22MM 12M A630-420HS (N)","grupo":"B Hormigón","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 22 CR","codigo":110007121,"desc":"Ø22 mm · 12 m"},{"n":"B HORMIGON 22MM 6M A630-420H (N)","grupo":"B Hormigón","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 22 CR","codigo":110002953,"desc":"Ø22 mm · 6 m"},{"n":"B HORMIGON 22MM 7M A630-420H (N)","grupo":"B Hormigón","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":7.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 22 CR","codigo":110002946,"desc":"Ø22 mm · 7 m"},{"n":"B HORMIGON 22MM 8M A630-420H (N)","grupo":"B Hormigón","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":8.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 22 CR","codigo":110002945,"desc":"Ø22 mm · 8 m"},{"n":"B HORMIGON 22MM 9M A630-420H (N)","grupo":"B Hormigón","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":9.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 22 CR","codigo":110002944,"desc":"Ø22 mm · 9 m"},{"n":"B HORMIGON 25MM 10M A630-420H (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110002943,"desc":"Ø25 mm · 10 m"},{"n":"B HORMIGON 25MM 10M A630-420HS (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110007864,"desc":"Ø25 mm · 10 m"},{"n":"B HORMIGON 25MM 11M A630-420H (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110002947,"desc":"Ø25 mm · 11 m"},{"n":"B HORMIGON 25MM 11M A630-420HS (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110007414,"desc":"Ø25 mm · 11 m"},{"n":"B HORMIGON 25MM 12M A630-420H (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110002941,"desc":"Ø25 mm · 12 m"},{"n":"B HORMIGON 25MM 12M A630-420HS (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110007122,"desc":"Ø25 mm · 12 m"},{"n":"B HORMIGON 25MM 6M A630-420H (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110002923,"desc":"Ø25 mm · 6 m"},{"n":"B HORMIGON 25MM 7M A630-420H (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":7.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110002927,"desc":"Ø25 mm · 7 m"},{"n":"B HORMIGON 25MM 7M A630-420HS (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":7.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110007410,"desc":"Ø25 mm · 7 m"},{"n":"B HORMIGON 25MM 8M A630-420H (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":8.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110002921,"desc":"Ø25 mm · 8 m"},{"n":"B HORMIGON 25MM 9M A630-420H (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":9.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110002905,"desc":"Ø25 mm · 9 m"},{"n":"B HORMIGON 25MM 9M A630-420HS (N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":9.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":110007412,"desc":"Ø25 mm · 9 m"},{"n":"B HORMIGON 28MM 10M A630-420H (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":110002892,"desc":"Ø28 mm · 10 m"},{"n":"B HORMIGON 28MM 11M A630-420H (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":110002893,"desc":"Ø28 mm · 11 m"},{"n":"B HORMIGON 28MM 11M A630-420HS (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":110007324,"desc":"Ø28 mm · 11 m"},{"n":"B HORMIGON 28MM 12M A630-420H (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":110002894,"desc":"Ø28 mm · 12 m"},{"n":"B HORMIGON 28MM 12M A630-420HS (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":110007133,"desc":"Ø28 mm · 12 m"},{"n":"B HORMIGON 28MM 6M A630-420H (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":110002922,"desc":"Ø28 mm · 6 m"},{"n":"B HORMIGON 28MM 7M A630-420H (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":7.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":110002895,"desc":"Ø28 mm · 7 m"},{"n":"B HORMIGON 28MM 7M A630-420HS (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":7.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":110007327,"desc":"Ø28 mm · 7 m"},{"n":"B HORMIGON 28MM 8M A630-420H (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":8.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":110002896,"desc":"Ø28 mm · 8 m"},{"n":"B HORMIGON 28MM 9M A630-420H (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":9.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":110002897,"desc":"Ø28 mm · 9 m"},{"n":"B HORMIGON 32MM 10M A630-420H (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110002898,"desc":"Ø32 mm · 10 m"},{"n":"B HORMIGON 32MM 10M A630-420HS (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110007131,"desc":"Ø32 mm · 10 m"},{"n":"B HORMIGON 32MM 11M A630-420H (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110002899,"desc":"Ø32 mm · 11 m"},{"n":"B HORMIGON 32MM 11M A630-420HS (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110007132,"desc":"Ø32 mm · 11 m"},{"n":"B HORMIGON 32MM 12M A630-420H (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110002900,"desc":"Ø32 mm · 12 m"},{"n":"B HORMIGON 32MM 12M A630-420HS (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110005868,"desc":"Ø32 mm · 12 m"},{"n":"B HORMIGON 32MM 6M A630-420H (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110002901,"desc":"Ø32 mm · 6 m"},{"n":"B HORMIGON 32MM 7M A630-420H (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":7.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110002902,"desc":"Ø32 mm · 7 m"},{"n":"B HORMIGON 32MM 7M A630-420HS (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":7.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110007164,"desc":"Ø32 mm · 7 m"},{"n":"B HORMIGON 32MM 8M A630-420H (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":8.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110002903,"desc":"Ø32 mm · 8 m"},{"n":"B HORMIGON 32MM 9M A630-420H (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":9.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110002904,"desc":"Ø32 mm · 9 m"},{"n":"B HORMIGON 32MM 9M A630-420HS (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":9.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 32 CR","codigo":110007169,"desc":"Ø32 mm · 9 m"},{"n":"B HORMIGON 36MM 10M A630-420H (N)","grupo":"B Hormigón","diametro":36.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 36 CR","codigo":110002906,"desc":"Ø36 mm · 10 m"},{"n":"B HORMIGON 36MM 11M A630-420H (N)","grupo":"B Hormigón","diametro":36.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 36 CR","codigo":110002920,"desc":"Ø36 mm · 11 m"},{"n":"B HORMIGON 36MM 11M A630-420HS (N)","grupo":"B Hormigón","diametro":36.0,"ancho":null,"espesor":null,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 36 CR","codigo":110007599,"desc":"Ø36 mm · 11 m"},{"n":"B HORMIGON 36MM 12M A630-420H (N)","grupo":"B Hormigón","diametro":36.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 36 CR","codigo":110002907,"desc":"Ø36 mm · 12 m"},{"n":"B HORMIGON 36MM 12M A630-420HS (N)","grupo":"B Hormigón","diametro":36.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 36 CR","codigo":110007600,"desc":"Ø36 mm · 12 m"},{"n":"B HORMIGON 36MM 6M A630-420H (N)","grupo":"B Hormigón","diametro":36.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 36 CR","codigo":110002919,"desc":"Ø36 mm · 6 m"},{"n":"B HORMIGON 36MM 7M A630-420H (N)","grupo":"B Hormigón","diametro":36.0,"ancho":null,"espesor":null,"lado":null,"largo":7.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 36 CR","codigo":110002908,"desc":"Ø36 mm · 7 m"},{"n":"B HORMIGON 36MM 8M A630-420HS (N)","grupo":"B Hormigón","diametro":36.0,"ancho":null,"espesor":null,"lado":null,"largo":8.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 36 CR","codigo":110007603,"desc":"Ø36 mm · 8 m"},{"n":"B HORMIGON 36MM 9M A630-420H (N)","grupo":"B Hormigón","diametro":36.0,"ancho":null,"espesor":null,"lado":null,"largo":9.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 36 CR","codigo":110002910,"desc":"Ø36 mm · 9 m"},{"n":"B HORMIGON 36MM 9M A630-420HS (N)","grupo":"B Hormigón","diametro":36.0,"ancho":null,"espesor":null,"lado":null,"largo":9.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 36 CR","codigo":110007602,"desc":"Ø36 mm · 9 m"},{"n":"B HORMIGON R 25MM 12M A630-420HS(N)","grupo":"B Hormigón","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 25 CR","codigo":119506789,"desc":"Ø25 mm · 12 m"},{"n":"B HORMIGON R 28MM 12M A630-420H (N)","grupo":"B Hormigón","diametro":28.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 28 CR","codigo":119506608,"desc":"Ø28 mm · 12 m"},{"n":"B HORMIGON R 32MM 12M A630-420HS (N)","grupo":"B Hormigón","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"desc":"Ø32 mm · 12 m"},{"n":"BARRA TRASPASO CARGA 22MM 6,2M A630-420H","grupo":"Redondo liso","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":6.2,"largo_asumido":false,"pulgadas":null,"formato":"RED 7/8","codigo":119506107,"desc":"Ø22 mm · 6,2 m"},{"n":"BARRA TRASPASO CARGA 25MM 6,2M A630-420H","grupo":"Redondo liso","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":6.2,"largo_asumido":false,"pulgadas":null,"formato":"RED 1","codigo":119507277,"desc":"Ø25 mm · 6,2 m"},{"n":"BARRA TRASPASO CARGA 32MM 6,2M A630-420H","grupo":"Redondo liso","diametro":32.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 1,1/4","codigo":119506110,"desc":"Ø32 mm · 6 m"},{"n":"CUADRADO 10MM 6M COMERCIAL (N)","grupo":"Cuadrado","diametro":null,"ancho":null,"espesor":null,"lado":10.0,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"CUAD 10","codigo":109007066,"desc":"10 mm · 6 m"},{"n":"CUADRADO 12MM 6M COMERCIAL (N)","grupo":"Cuadrado","diametro":null,"ancho":null,"espesor":null,"lado":12.0,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"CUAD 12","codigo":109007065,"desc":"12 mm · 6 m"},{"n":"CUADRADO 14MM 6M COMERCIAL (N)","grupo":"Cuadrado","diametro":null,"ancho":null,"espesor":null,"lado":14.0,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"CUAD 14","codigo":109007064,"desc":"14 mm · 6 m"},{"n":"CUADRADO 16MM 6M COMERCIAL (N)","grupo":"Cuadrado","diametro":null,"ancho":null,"espesor":null,"lado":16.0,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"CUAD 16","codigo":109007062,"desc":"16 mm · 6 m"},{"n":"CUADRADO 18MM 6M COMERCIAL (N)","grupo":"Cuadrado","diametro":null,"ancho":null,"espesor":null,"lado":18.0,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"CUAD 18","codigo":109007068,"desc":"18 mm · 6 m"},{"n":"CUADRADO 25MM 6M COMERCIAL (N)","grupo":"Cuadrado","diametro":null,"ancho":null,"espesor":null,"lado":25.0,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"CUAD 25","codigo":109007061,"desc":"25 mm · 6 m"},{"n":"HEXAGONO 1 1/8' 8MM SAE 1045 (N)","grupo":"Hexágono","diametro":28.6,"ancho":null,"espesor":null,"lado":null,"largo":8.0,"largo_asumido":false,"pulgadas":"1 1/8\"","desc":"28,6 mm e/c · 8 m"},{"n":"HEXAGONO 1' 8M SAE 1045 (N)","grupo":"Hexágono","diametro":25.4,"ancho":null,"espesor":null,"lado":null,"largo":8.0,"largo_asumido":false,"pulgadas":"1\"","formato":"HEX 1","codigo":109006943,"desc":"25,4 mm e/c · 8 m"},{"n":"PLANA 1\"X1/8\" X 7,315m ASTM A36 (P)","grupo":"Plana","diametro":null,"ancho":25.4,"espesor":3.2,"lado":null,"largo":7.315,"largo_asumido":false,"pulgadas":"1\"x1/8\"","desc":"25,4×3,2 mm · 7,315 m"},{"n":"PLANA 1\"X3/16\" X 6,1m ASTM A36 (P)","grupo":"Plana","diametro":null,"ancho":25.4,"espesor":4.8,"lado":null,"largo":6.1,"largo_asumido":false,"pulgadas":"1\"x3/16\"","formato":"PL 1\" x 6","codigo":119507005,"desc":"25,4×4,8 mm · 6,1 m"},{"n":"PLANA 100X10MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":100.0,"espesor":10.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 100 x 10","codigo":109007136,"desc":"100×10 mm · 6 m"},{"n":"PLANA 100X12MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":100.0,"espesor":12.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 100 x 12","codigo":109007135,"desc":"100×12 mm · 6 m"},{"n":"PLANA 100X5MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":100.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 100 x 5","codigo":109007139,"desc":"100×5 mm · 6 m"},{"n":"PLANA 100X6MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":100.0,"espesor":6.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 100 x 6","codigo":109007138,"desc":"100×6 mm · 6 m"},{"n":"PLANA 100X8MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":100.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 100 x 8","codigo":109007137,"desc":"100×8 mm · 6 m"},{"n":"PLANA 18X8MM 6M COM (Canto-RED) (N)","grupo":"Plana","diametro":null,"ancho":18.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 18 x 8","codigo":119502737,"desc":"18×8 mm · 6 m"},{"n":"PLANA 18X8MM 6M COMERCIAL (N)","grupo":"Plana","diametro":null,"ancho":18.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 18 x 8","codigo":109007087,"desc":"18×8 mm · 6 m"},{"n":"PLANA 19X7,3MM 6M COMERCIAL (N)","grupo":"Plana","diametro":null,"ancho":19.0,"espesor":7.3,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 19 x 7,3","codigo":109007019,"desc":"19×7,3 mm · 6 m"},{"n":"PLANA 20X10MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":20.0,"espesor":10.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 20 x 10","codigo":119502248,"desc":"20×10 mm · 6 m"},{"n":"PLANA 20X5MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":20.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 20 x 5","codigo":119502244,"desc":"20×5 mm · 6 m"},{"n":"PLANA 20X6MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":20.0,"espesor":6.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 20 x 6","codigo":119502246,"desc":"20×6 mm · 6 m"},{"n":"PLANA 20X8MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":20.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 20 x 8","codigo":119502247,"desc":"20×8 mm · 6 m"},{"n":"PLANA 25X10MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":25.0,"espesor":10.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 25 x 10","codigo":109013857,"desc":"25×10 mm · 6 m"},{"n":"PLANA 25X2,85MM 6M A270ES ARR(N)","grupo":"Plana","diametro":null,"ancho":25.0,"espesor":2.85,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 25 x 3","codigo":109015693,"desc":"25×2,85 mm · 6 m"},{"n":"PLANA 25X3MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":25.0,"espesor":3.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 25 x 3","codigo":109013858,"desc":"25×3 mm · 6 m"},{"n":"PLANA 25X5MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":25.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 25 x 5","codigo":109013945,"desc":"25×5 mm · 6 m"},{"n":"PLANA 32X10MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":32.0,"espesor":10.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 32 x 10","codigo":109013877,"desc":"32×10 mm · 6 m"},{"n":"PLANA 32X3MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":32.0,"espesor":3.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 32 x 3","codigo":109013879,"desc":"32×3 mm · 6 m"},{"n":"PLANA 32X5MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":32.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 32 x 5","codigo":109013897,"desc":"32×5 mm · 6 m"},{"n":"PLANA 32X6MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":32.0,"espesor":6.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 32 x 6","codigo":109013916,"desc":"32×6 mm · 6 m"},{"n":"PLANA 32X8MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":32.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 32 x 8","codigo":109013915,"desc":"32×8 mm · 6 m"},{"n":"PLANA 32x2,85mm 6m A270ES ARR(N)","grupo":"Plana","diametro":null,"ancho":32.0,"espesor":2.85,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 32 x 3","codigo":109015695,"desc":"32×2,85 mm · 6 m"},{"n":"PLANA 38X10MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":38.0,"espesor":10.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 38 x 10","codigo":109013898,"desc":"38×10 mm · 6 m"},{"n":"PLANA 38X3MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":38.0,"espesor":3.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 38 x 3","codigo":109013904,"desc":"38×3 mm · 6 m"},{"n":"PLANA 38X5MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":38.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 38 x 5","codigo":109013914,"desc":"38×5 mm · 6 m"},{"n":"PLANA 38X6MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":38.0,"espesor":6.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 38 x 6","codigo":109013913,"desc":"38×6 mm · 6 m"},{"n":"PLANA 38X8MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":38.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 38 x 8","codigo":109013912,"desc":"38×8 mm · 6 m"},{"n":"PLANA 50X10MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":50.0,"espesor":10.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 50 x 10","codigo":109013905,"desc":"50×10 mm · 6 m"},{"n":"PLANA 50X12MM 6M A270ES","grupo":"Plana","diametro":null,"ancho":50.0,"espesor":12.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"Pl 50 x 12","codigo":109014933,"desc":"50×12 mm · 6 m"},{"n":"PLANA 50X3 MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":50.0,"espesor":3.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 50 x 3","codigo":109013903,"desc":"50×3 mm · 6 m"},{"n":"PLANA 50X4 MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":50.0,"espesor":4.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 50 x 4","codigo":109013983,"desc":"50×4 mm · 6 m"},{"n":"PLANA 50X5MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":50.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 50 x 5","codigo":109013902,"desc":"50×5 mm · 6 m"},{"n":"PLANA 50X6MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":50.0,"espesor":6.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 50 x 6","codigo":109013901,"desc":"50×6 mm · 6 m"},{"n":"PLANA 50X8MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":50.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 50 x 8","codigo":109013900,"desc":"50×8 mm · 6 m"},{"n":"PLANA 63X10MM 6M A270 (N)","grupo":"Plana","diametro":null,"ancho":63.0,"espesor":10.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 63 x 10","codigo":109013910,"desc":"63×10 mm · 6 m"},{"n":"PLANA 63X12MM 6M A270ES","grupo":"Plana","diametro":null,"ancho":63.0,"espesor":12.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 63 x 12","codigo":109014932,"desc":"63×12 mm · 6 m"},{"n":"PLANA 63X5MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":63.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 63 x 5","codigo":109013899,"desc":"63×5 mm · 6 m"},{"n":"PLANA 63X6MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":63.0,"espesor":6.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 63 x 6","codigo":109013906,"desc":"63×6 mm · 6 m"},{"n":"PLANA 63X8MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":63.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 63 x 8","codigo":109013944,"desc":"63×8 mm · 6 m"},{"n":"PLANA 75X10MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":75.0,"espesor":10.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 75 x 10","codigo":109013907,"desc":"75×10 mm · 6 m"},{"n":"PLANA 75X12MM 6M A270ES","grupo":"Plana","diametro":null,"ancho":75.0,"espesor":12.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"desc":"75×12 mm · 6 m"},{"n":"PLANA 75X5MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":75.0,"espesor":5.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 75 x 5","codigo":109013908,"desc":"75×5 mm · 6 m"},{"n":"PLANA 75X6MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":75.0,"espesor":6.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 75 x 6","codigo":109013911,"desc":"75×6 mm · 6 m"},{"n":"PLANA 75X8MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":75.0,"espesor":8.0,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 75 x 8","codigo":109013909,"desc":"75×8 mm · 6 m"},{"n":"PLANA ASERRADA 25X4,85MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":25.0,"espesor":4.85,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 25 x 4,85","codigo":109016010,"desc":"25×4,85 mm · 6 m"},{"n":"PLANA ASERRADA 32X4,85MM 6M A270ES (N)","grupo":"Plana","diametro":null,"ancho":32.0,"espesor":4.85,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"PL 32 x 4,85","codigo":109016011,"desc":"32×4,85 mm · 6 m"},{"n":"PLANA RESALTE 50X4 MM 11M A345 ES (N)","grupo":"Plana","diametro":null,"ancho":50.0,"espesor":4.0,"lado":null,"largo":11.0,"largo_asumido":false,"pulgadas":null,"formato":"PL CR 50 x 4","codigo":119507263,"desc":"50×4 mm · 11 m"},{"n":"REDONDO LISO 1 1/2' 6M ASTM A 36 (N)","grupo":"Redondo liso","diametro":38.1,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 1/2\"","formato":"RED 1,1/2","codigo":109006963,"desc":"Ø38,1 mm · 6 m"},{"n":"REDONDO LISO 1 1/2' 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":38.1,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 1/2\"","formato":"RED 1,1/2","codigo":109006908,"desc":"Ø38,1 mm · 6 m"},{"n":"REDONDO LISO 1 1/2' 6M SAE 1045 (N)","grupo":"Redondo liso","diametro":38.1,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 1/2\"","formato":"RED 1,1/2","codigo":109006885,"desc":"Ø38,1 mm · 6 m"},{"n":"REDONDO LISO 1 1/4' 6M A615 GR60(P)","grupo":"Redondo liso","diametro":31.8,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 1/4\"","formato":"RED 1,1/4","codigo":119502541,"desc":"Ø31,8 mm · 6 m"},{"n":"REDONDO LISO 1 1/4' 6M ASTM A 36 (N)","grupo":"Redondo liso","diametro":31.8,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 1/4\"","formato":"RED 1,1/4","codigo":109006933,"desc":"Ø31,8 mm · 6 m"},{"n":"REDONDO LISO 1 1/4' 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":31.8,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 1/4\"","formato":"RED 1,1/4","codigo":109006898,"desc":"Ø31,8 mm · 6 m"},{"n":"REDONDO LISO 1 1/4' 6M SAE 1045 (N)","grupo":"Redondo liso","diametro":31.8,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 1/4\"","formato":"RED 1,1/4","codigo":109006873,"desc":"Ø31,8 mm · 6 m"},{"n":"REDONDO LISO 1 1/8' 6M ASTM A 36 (N)","grupo":"Redondo liso","diametro":28.6,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 1/8\"","formato":"RED 1,1/8L","codigo":109006932,"desc":"Ø28,6 mm · 6 m"},{"n":"REDONDO LISO 1 1/8' 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":28.6,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 1/8\"","formato":"RED 1,1/8L","codigo":109006905,"desc":"Ø28,6 mm · 6 m"},{"n":"REDONDO LISO 1 3/4' 6M A36 (N)","grupo":"Redondo liso","diametro":44.4,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 3/4\"","formato":"RL 1,3/4","codigo":119502538,"desc":"Ø44,4 mm · 6 m"},{"n":"REDONDO LISO 1 3/4' 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":44.4,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 3/4\"","formato":"RL 1,3/4","codigo":109006938,"desc":"Ø44,4 mm · 6 m"},{"n":"REDONDO LISO 1 3/4' 6M SAE 1045 (N)","grupo":"Redondo liso","diametro":44.4,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 3/4\"","formato":"RL 1,3/4","codigo":119502537,"desc":"Ø44,4 mm · 6 m"},{"n":"REDONDO LISO 1 3/8'' 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":34.9,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1 3/8\"","formato":"RL 1,3/8","codigo":119502803,"desc":"Ø34,9 mm · 6 m"},{"n":"REDONDO LISO 1' 6M A615 GR60(P)","grupo":"Redondo liso","diametro":25.4,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1\"","desc":"Ø25,4 mm · 6 m"},{"n":"REDONDO LISO 1' 6M ASTM A 36 (N)","grupo":"Redondo liso","diametro":25.4,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1\"","formato":"RED 1","codigo":109006880,"desc":"Ø25,4 mm · 6 m"},{"n":"REDONDO LISO 1' 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":25.4,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1\"","formato":"RED 1","codigo":109006911,"desc":"Ø25,4 mm · 6 m"},{"n":"REDONDO LISO 1' 6M SAE 1045 (N)","grupo":"Redondo liso","diametro":25.4,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1\"","formato":"RED 1","codigo":109006875,"desc":"Ø25,4 mm · 6 m"},{"n":"REDONDO LISO 1/2' 6M ASTM A 36 (N)","grupo":"Redondo liso","diametro":12.7,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1/2\"","formato":"RED 1/2\"","codigo":109006907,"desc":"Ø12,7 mm · 6 m"},{"n":"REDONDO LISO 1/2' 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":12.7,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1/2\"","formato":"RED 1/2\"","codigo":109006915,"desc":"Ø12,7 mm · 6 m"},{"n":"REDONDO LISO 1/2' 6M SAE 1045 (N)","grupo":"Redondo liso","diametro":12.7,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"1/2\"","formato":"RED 1/2\"","codigo":109006879,"desc":"Ø12,7 mm · 6 m"},{"n":"REDONDO LISO 12MM 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":12.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 12","codigo":109007067,"desc":"Ø12 mm · 6 m"},{"n":"REDONDO LISO 16MM 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":16.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 16","codigo":119502683,"desc":"Ø16 mm · 6 m"},{"n":"REDONDO LISO 18MM 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":18.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 18","codigo":109006919,"desc":"Ø18 mm · 6 m"},{"n":"REDONDO LISO 19MM 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":19.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"RED 19","codigo":109006918,"desc":"Ø19 mm · 6 m"},{"n":"REDONDO LISO 3/4' 6M ASTM A 36 (N)","grupo":"Redondo liso","diametro":19.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"3/4\"","formato":"RED 19","codigo":109006937,"desc":"Ø19 mm · 6 m"},{"n":"REDONDO LISO 3/4' 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":19.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"3/4\"","formato":"RED 19","codigo":109006926,"desc":"Ø19 mm · 6 m"},{"n":"REDONDO LISO 3/4' 6M SAE 1045 (N)","grupo":"Redondo liso","diametro":19.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"3/4\"","formato":"RED 19","codigo":109006877,"desc":"Ø19 mm · 6 m"},{"n":"REDONDO LISO 5/8' 6M ASTM A 36 (N)","grupo":"Redondo liso","diametro":15.9,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"5/8\"","formato":"RED 16","codigo":109006935,"desc":"Ø15,9 mm · 6 m"},{"n":"REDONDO LISO 5/8' 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":15.9,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"5/8\"","formato":"RED 16","codigo":109006913,"desc":"Ø15,9 mm · 6 m"},{"n":"REDONDO LISO 5/8' 6M SAE 1045 (N)","grupo":"Redondo liso","diametro":15.9,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"5/8\"","formato":"RED 16","codigo":109006878,"desc":"Ø15,9 mm · 6 m"},{"n":"REDONDO LISO 7/8' 6M ASTM A 36 (N)","grupo":"Redondo liso","diametro":22.2,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"7/8\"","formato":"RED 7/8","codigo":109006936,"desc":"Ø22,2 mm · 6 m"},{"n":"REDONDO LISO 7/8' 6M SAE 1020 (N)","grupo":"Redondo liso","diametro":22.2,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"7/8\"","formato":"RED 7/8","codigo":109006912,"desc":"Ø22,2 mm · 6 m"},{"n":"REDONDO LISO 7/8' 6M SAE 1045 (N)","grupo":"Redondo liso","diametro":22.2,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":"7/8\"","formato":"RED 7/8","codigo":109006876,"desc":"Ø22,2 mm · 6 m"},{"n":"SAFEROCK 19MM 10,5M A520","grupo":"Saferock","diametro":19.0,"ancho":null,"espesor":null,"lado":null,"largo":10.5,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 19","codigo":119505900,"desc":"Ø19 mm · 10,5 m"},{"n":"SAFEROCK 19MM 11,96M A520","grupo":"Saferock","diametro":19.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 19","codigo":119505901,"desc":"Ø19 mm · 6 m"},{"n":"SAFEROCK 22MM 10,5M A280","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":10.5,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":106501802,"desc":"Ø22 mm · 10,5 m"},{"n":"SAFEROCK 22MM 10,5M A280D","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":10.5,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":119506836,"desc":"Ø22 mm · 10,5 m"},{"n":"SAFEROCK 22MM 10,5M A520","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":10.5,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":119506835,"desc":"Ø22 mm · 10,5 m"},{"n":"SAFEROCK 22MM 10,8M A280","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":10.8,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":119502095,"desc":"Ø22 mm · 10,8 m"},{"n":"SAFEROCK 22MM 10.5M A280","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":10.5,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":106043321,"desc":"Ø22 mm · 10,5 m"},{"n":"SAFEROCK 22MM 10M A280","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":106043322,"desc":"Ø22 mm · 10 m"},{"n":"SAFEROCK 22MM 10M A420","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":106047305,"desc":"Ø22 mm · 10 m"},{"n":"SAFEROCK 22MM 11,96M A520","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":119506375,"desc":"Ø22 mm · 6 m"},{"n":"SAFEROCK 22MM 12M A280","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":106025569,"desc":"Ø22 mm · 12 m"},{"n":"SAFEROCK 22MM 12M A280D","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":119506901,"desc":"Ø22 mm · 12 m"},{"n":"SAFEROCK 22MM 12M A420","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":106025567,"desc":"Ø22 mm · 12 m"},{"n":"SAFEROCK 22MM 12M A520","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":119506376,"desc":"Ø22 mm · 12 m"},{"n":"SAFEROCK 22MM 6M A280","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":106025587,"desc":"Ø22 mm · 6 m"},{"n":"SAFEROCK 22MM 9,6M A280","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":9.6,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":106503248,"desc":"Ø22 mm · 9,6 m"},{"n":"SAFEROCK 22MM 9,6M A420","grupo":"Saferock","diametro":22.0,"ancho":null,"espesor":null,"lado":null,"largo":9.6,"largo_asumido":false,"pulgadas":null,"formato":"SFRCK 22","codigo":106025529,"desc":"Ø22 mm · 9,6 m"},{"n":"SAFEROCK 25MM 10,5M A280","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":10.5,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":106503215,"desc":"Ø25 mm · 10,5 m"},{"n":"SAFEROCK 25MM 10,5M A420","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":10.5,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":106503243,"desc":"Ø25 mm · 10,5 m"},{"n":"SAFEROCK 25MM 10,8M A280","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":10.8,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":106503217,"desc":"Ø25 mm · 10,8 m"},{"n":"SAFEROCK 25MM 10,8M A420","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":10.8,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":106047303,"desc":"Ø25 mm · 10,8 m"},{"n":"SAFEROCK 25MM 10M A420","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":10.0,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":106043671,"desc":"Ø25 mm · 10 m"},{"n":"SAFEROCK 25MM 11,6M A420","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":11.6,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":106047304,"desc":"Ø25 mm · 11,6 m"},{"n":"SAFEROCK 25MM 11,96M A520","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":6.0,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":119505903,"desc":"Ø25 mm · 6 m"},{"n":"SAFEROCK 25MM 12M A280","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":106025585,"desc":"Ø25 mm · 12 m"},{"n":"SAFEROCK 25MM 12M A420","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":106025583,"desc":"Ø25 mm · 12 m"},{"n":"SAFEROCK 25MM 12M A520D","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":12.0,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":119506719,"desc":"Ø25 mm · 12 m"},{"n":"SAFEROCK 25MM 8,4M A520","grupo":"Saferock","diametro":25.0,"ancho":null,"espesor":null,"lado":null,"largo":10.8,"largo_asumido":false,"pulgadas":null,"formato":"SFR 25","codigo":119505906,"desc":"Ø25 mm · 10,8 m"}],"ordenes":[["43046145",35,"2026-01-02",43702.0,47480.4,96.0],["43046081",35,"2026-01-02",125108.0,133293.6,96.0],["43046082",33,"2026-01-02",227051.0,237864.0,96.0],["43046144",31,"2026-01-03",42168.0,44880.0,96.0],["43046083",41,"2026-01-03",55745.0,59241.6,95.9],["43046084",40,"2026-01-03",22669.0,24235.2,96.0],["43046085",38,"2026-01-03",31676.0,33660.0,95.9],["43046086",37,"2026-01-03",80445.0,84823.2,96.0],["43046087",36,"2026-01-03",134976.0,143616.0,95.0],["43046088",34,"2026-01-05",29326.0,28723.2,95.0],["43046089",78,"2026-01-05",198647.0,214236.0,96.0],["43046092",217,"2026-01-06",72482.0,78540.0,95.3],["43046094",209,"2026-01-06",77144.0,81232.8,95.0],["43046091",215,"2026-01-06",55630.0,59241.6,97.0],["43046095",219,"2026-01-06",33919.0,36801.6,97.0],["43046090",218,"2026-01-06",23250.0,24684.0,97.0],["43046096",6,"2026-01-06",21894.0,25581.6,97.0],["43046097",29,"2026-01-07",60255.0,65524.8,93.4],["43046098",27,"2026-01-07",28006.0,35904.0,94.9],["43046237",126,"2026-01-07",60365.0,65841.6,96.8],["43046238",102,"2026-01-08",78534.0,84216.0,96.7],["43046240",121,"2026-01-08",31293.0,33303.6,96.7],["43046241",8,"2026-01-08",102257.0,106444.8,96.3],["43046244",135,"2026-01-09",75178.0,78988.8,96.6],["43046245",130,"2026-01-09",30541.0,32524.8,96.6],["43046246",10,"2026-01-09",30817.0,34557.6,96.1],["43046272",9,"2026-01-09",128307.0,134640.0,96.3],["43046248",187,"2026-01-10",20226.0,22440.0,95.9],["43046249",180,"2026-01-10",26674.0,28274.4,95.8],["43046250",30,"2026-01-10",169988.0,177724.8,96.5],["43046273",30,"2026-01-12",56350.0,59241.6,96.5],["43046301",104,"2026-01-12",32676.0,35006.4,96.6],["43046317",136,"2026-01-12",122391.0,124317.6,96.5],["43046303",136,"2026-01-13",13017.0,14361.6,96.5],["43046325",11,"2026-01-13",180909.0,198369.6,96.0],["43046327",141,"2026-01-13",104709.0,114892.8,96.3],["43046344",15,"2026-01-14",30247.0,33211.2,95.3],["43046345",14,"2026-01-14",190119.0,205101.6,95.7],["43046350",13,"2026-01-15",17970.0,19430.4,97.0],["43046333",18,"2026-01-15",43862.0,48021.6,94.8],["43046336",17,"2026-01-15",221125.0,239210.4,95.3],["43046383",56,"2026-01-16",62928.0,67082.4,95.0],["43046385",52,"2026-01-16",182827.0,191664.0,95.0],["43046386",52,"2026-01-17",23015.0,24684.0,95.0],["43046387",62,"2026-01-17",57330.0,60984.0,95.0],["43046393",59,"2026-01-17",82831.0,88281.6,95.0],["43046420",61,"2026-01-19",24872.0,26928.0,95.0],["43046421",62,"2026-01-19",33662.0,36352.8,95.0],["43046390",58,"2026-01-19",38630.0,41289.6,95.0],["43046394",57,"2026-01-19",27516.0,29620.8,95.0],["43046396",55,"2026-01-19",24036.0,25132.8,95.0],["43046398",63,"2026-01-19",40747.0,43533.6,95.0],["43046400",144,"2026-01-19",72553.0,77193.6,96.0],["43046424",152,"2026-01-19",25145.0,32762.4,94.5],["43046425",151,"2026-01-19",73055.0,78091.2,94.7],["43046426",155,"2026-01-20",60035.0,64178.4,95.1],["43046427",154,"2026-01-20",30556.0,30069.6,95.4],["43046428",153,"2026-01-20",44066.0,50265.6,95.6],["43046434",21,"2026-01-20",31232.0,33660.0,94.7],["43046435",23,"2026-01-20",70432.0,75398.4,95.1],["43046436",23,"2026-01-20",26112.0,27376.8,95.1],["43046438",22,"2026-01-20",137217.0,147206.4,95.1],["43046437",5,"2026-01-21",23239.0,25132.8,97.0],["43046443",197,"2026-01-21",27349.0,29620.8,96.0],["43046481",202,"2026-01-21",163929.0,176140.8,95.9],["43046439",206,"2026-01-22",23202.0,19430.4,95.9],["43046442",202,"2026-01-22",52097.0,54912.0,95.9],["43046487",198,"2026-01-22",23187.0,16051.2,97.0],["43046489",194,"2026-01-22",49093.0,48153.6,95.8],["43046446",199,"2026-01-22",46669.0,49368.0,95.3],["43046447",207,"2026-01-22",135071.0,142269.6,95.7],["43046433",195,"2026-01-23",144360.0,165607.2,97.0],["43046449",193,"2026-01-23",28084.0,30967.2,97.0],["43046476",35,"2026-01-23",566071.0,594211.2,96.0],["43046477",31,"2026-01-26",11966.0,12566.4,96.0],["43046402",113,"2026-01-26",30960.0,33211.2,95.1],["43046527",112,"2026-01-26",70530.0,75398.4,95.5],["43046404",116,"2026-01-27",26018.0,29172.0,95.2],["43046528",116,"2026-01-27",5192.0,4224.0,95.2],["43046529",114,"2026-01-27",53597.0,55756.8,96.0],["43046530",114,"2026-01-27",56034.0,58792.8,96.0],["43046507",217,"2026-01-27",121314.0,127908.0,95.3],["43046536",217,"2026-01-27",147042.0,155733.6,95.3],["43046508",214,"2026-01-27",31491.0,34557.6,95.4],["43046509",212,"2026-01-28",45275.0,47572.8,95.3],["43046510",213,"2026-01-28",58065.0,63280.8,95.4],["43046511",213,"2026-01-28",64700.0,69115.2,95.4],["43046512",218,"2026-01-28",28034.0,29620.8,97.0],["43046505",172,"2026-01-28",55030.0,59241.6,97.0],["43046513",174,"2026-01-28",129938.0,138230.4,94.7],["43046514",175,"2026-01-29",47334.0,49816.8,94.7],["43046515",145,"2026-01-29",45826.0,48919.2,95.7],["43046516",143,"2026-01-29",98031.0,105916.8,96.0],["43046544",12,"2026-01-29",30890.0,33211.2,95.8],["43046547",11,"2026-01-29",197450.0,215424.0,96.0],["43046548",106,"2026-01-30",32559.0,34557.6,95.4],["43046550",181,"2026-01-30",31973.0,34108.8,95.3],["43046479",38,"2026-01-30",23719.0,25132.8,95.9],["43046561",40,"2026-01-30",59215.0,62290.8,96.0],["43046562",41,"2026-01-30",59730.0,63597.6,95.9],["43046563",41,"2026-01-30",9069.0,9873.6,95.9],["43046564",35,"2026-01-30",108299.0,113546.4,96.0],["43046565",33,"2026-01-30",131364.0,138230.4,96.0],["43046566",31,"2026-01-31",89449.0,94248.0,96.0],["43046657",37,"2026-01-31",62733.0,66871.2,96.0],["43046638",37,"2026-02-02",48334.0,50714.4,96.0],["43046639",46,"2026-02-02",284576.0,302398.8,97.4],["43046672",46,"2026-02-02",8559.0,9292.8,97.4],["43046674",42,"2026-02-02",33638.0,35904.0,97.4],["43046675",49,"2026-02-02",99872.0,105916.8,97.4],["43046673",48,"2026-02-03",57385.0,60403.2,97.4],["43046643",140,"2026-02-03",37866.0,40392.0,95.1],["43046644",139,"2026-02-03",92160.0,97838.4,95.4],["43046645",147,"2026-02-03",49230.0,53856.0,94.8],["43046646",146,"2026-02-03",49943.0,53407.2,95.2],["43046647",149,"2026-02-03",39904.0,42187.2,95.7],["43046648",148,"2026-02-04",142247.0,151694.4,95.8],["43046725",148,"2026-02-04",6432.0,6758.4,95.8],["43046712",16,"2026-02-04",89909.0,96492.0,95.4],["43046713",15,"2026-02-04",60188.0,64178.4,95.3],["43046714",14,"2026-02-05",145922.0,155284.8,95.7],["43046728",14,"2026-02-05",11807.0,12566.4,95.7],["43046740",54,"2026-02-05",127587.0,133729.2,95.0],["43046741",59,"2026-02-05",102039.0,108609.6,95.0],["43046742",58,"2026-02-06",104598.0,110206.8,95.0],["43046746",134,"2026-02-06",45411.0,48470.4,95.8],["43046748",138,"2026-02-06",45506.0,47572.8,96.0],["43046788",141,"2026-02-06",74933.0,80784.0,96.3],["43046820",141,"2026-02-07",59887.0,65049.6,96.3],["43046819",105,"2026-02-07",30824.0,33792.0,95.5],["43046751",195,"2026-02-07",104035.0,116688.0,97.0],["43046752",203,"2026-02-09",63041.0,66871.2,97.0],["43046753",202,"2026-02-09",61787.0,65894.4,95.9],["43046809",202,"2026-02-09",138716.0,147417.6,95.9],["43046810",194,"2026-02-09",48459.0,51110.4,95.8],["43046811",199,"2026-02-10",108935.0,117136.8,95.3],["43046812",35,"2026-02-10",424648.0,449697.6,96.0],["43046815",41,"2026-02-11",21291.0,22440.0,95.9],["43046816",40,"2026-02-11",23692.0,25132.8,96.0],["43046817",38,"2026-02-11",21668.0,22888.8,95.9],["43046818",37,"2026-02-11",45400.0,47572.8,96.0],["43046847",90,"2026-02-11",52250.0,57697.2,96.0],["43046848",93,"2026-02-11",21594.0,23654.4,97.0],["43046849",86,"2026-02-11",34390.0,38016.0,96.0],["43046850",94,"2026-02-11",30354.0,32920.8,97.0],["43046851",78,"2026-02-12",199067.0,207108.0,96.0],["43046876",97,"2026-02-12",21106.0,23232.0,97.0],["43046870",67,"2026-02-12",432063.0,456192.0,96.0],["43046871",65,"2026-02-13",100975.0,108504.0,94.0],["43046872",64,"2026-02-13",100751.0,108160.8,96.0],["43046873",73,"2026-02-13",130174.0,138230.4,94.0],["43046875",70,"2026-02-14",156353.0,167270.4,96.0],["43046874",72,"2026-02-16",95867.0,100980.0,96.0],["43046892",69,"2026-02-16",21152.0,22440.0,96.0],["43046893",96,"2026-02-16",53588.0,57934.8,97.0],["43046894",56,"2026-02-16",22488.0,23958.0,95.0],["43046895",210,"2026-02-16",49673.0,51612.0,95.0],["43046896",213,"2026-02-16",31168.0,33211.2,95.4],["43046897",217,"2026-02-16",31705.0,33211.2,95.3],["43046898",214,"2026-02-16",20770.0,22440.0,95.4],["43046923",215,"2026-02-16",25881.0,31864.8,97.0],["43046924",219,"2026-02-17",24855.0,26479.2,97.0],["43046901",144,"2026-02-17",86938.0,96492.0,96.0],["43046902",143,"2026-02-17",29760.0,31864.8,96.0],["43046903",14,"2026-02-17",311208.0,332560.8,95.7],["43046945",179,"2026-02-18",215267.0,240781.2,95.9],["43046958",127,"2026-02-19",47048.0,50529.6,96.5],["43046959",117,"2026-02-20",22412.0,23733.6,96.6],["43046960",118,"2026-02-20",22193.0,23733.6,96.6],["43046979",119,"2026-02-20",31777.0,33686.4,96.7],["43046962",129,"2026-02-20",55405.0,59716.8,96.6],["43046978",103,"2026-02-20",77364.0,82790.4,96.6],["43046964",131,"2026-02-21",29809.0,32947.2,96.5],["43046965",130,"2026-02-21",36240.0,38438.4,96.6],["43046966",157,"2026-02-21",86731.0,91660.8,96.5],["43046967",135,"2026-02-23",107368.0,114470.4,96.6],["43046992",9,"2026-02-23",138377.0,145411.2,96.3],["43046993",180,"2026-02-24",130843.0,139576.8,95.8],["43047006",180,"2026-02-24",33940.0,35600.4,95.8],["43046997",187,"2026-02-24",56962.0,61485.6,95.9],["43046994",20,"2026-02-24",87484.0,94696.8,94.6],["43046995",19,"2026-02-24",90205.0,97389.6,94.8],["43046996",17,"2026-02-25",157069.0,167851.2,95.3],["43047020",25,"2026-02-25",30159.0,33211.2,94.1],["43047021",29,"2026-02-25",32383.0,32762.4,93.4],["43047022",27,"2026-02-26",138572.0,146308.8,94.9],["43047023",7,"2026-02-26",23651.0,25132.8,97.0],["43047024",170,"2026-02-26",15632.0,18163.2,97.0],["43047052",168,"2026-02-26",15630.0,19298.4,97.0],["43047025",159,"2026-02-26",16997.0,19298.4,94.3],["43047027",160,"2026-02-26",46143.0,47572.8,94.3],["43047026",161,"2026-02-26",21354.0,22440.0,94.3],["43047030",163,"2026-02-26",20819.0,23232.0,95.1],["43047031",164,"2026-02-27",59627.0,65472.0,95.1],["43047032",165,"2026-02-27",30422.0,32524.8,95.1],["43047033",162,"2026-02-27",21266.0,23232.0,97.0],["43047035",166,"2026-02-27",27099.0,29620.8,95.3],["43047057",107,"2026-02-27",30527.0,32524.8,96.3],["43047062",54,"2026-02-27",62151.0,68217.6,95.0],["43047058",52,"2026-02-27",108508.0,118483.2,95.0],["43047063",56,"2026-02-28",22364.0,24393.6,95.0],["43047067",52,"2026-02-28",36085.0,39283.2,95.0],["43047061",62,"2026-02-28",48436.0,52272.0,95.0],["43047059",61,"2026-02-28",88600.0,93799.2,95.0],["43047066",59,"2026-02-28",40304.0,43784.4,95.0],["43047162",59,"2026-03-02",36660.0,39692.4,95.0],["43047161",58,"2026-03-02",32678.0,35006.4,95.0],["43047072",56,"2026-03-02",113893.0,121968.0,95.0],["43047073",57,"2026-03-02",63876.0,69260.4,95.0],["43047074",90,"2026-03-02",53072.0,58106.4,96.0],["43047075",90,"2026-03-02",21796.0,23324.4,96.0],["43047076",88,"2026-03-02",30534.0,29858.4,96.0],["43047077",182,"2026-03-03",88869.0,95145.6,95.2],["43047079",184,"2026-03-03",30217.0,28723.2,95.2],["43047078",183,"2026-03-03",20159.0,21542.4,95.2],["43047080",185,"2026-03-03",25128.0,26928.0,95.2],["43047081",189,"2026-03-03",20800.0,21542.4,95.0],["43047082",190,"2026-03-03",93040.0,98736.0,95.0],["43047083",11,"2026-03-03",241440.0,258060.0,96.0],["43047210",125,"2026-03-04",53613.0,60099.6,96.8],["43047207",126,"2026-03-05",102081.0,107949.6,96.8],["43047245",102,"2026-03-05",39968.0,42108.0,96.7],["43047209",121,"2026-03-05",54088.0,57420.0,96.7],["43047211",156,"2026-03-05",33011.0,35217.6,96.7],["43047212",117,"2026-03-06",43039.0,45553.2,96.6],["43047213",129,"2026-03-06",160520.0,168432.0,96.6],["43047214",133,"2026-03-06",23839.0,24882.0,96.7],["43047260",130,"2026-03-06",73474.0,78988.8,96.6],["43047261",157,"2026-03-07",39865.0,42240.0,96.5],["43047297",135,"2026-03-09",101510.0,114048.0,96.6],["43047263",8,"2026-03-09",152797.0,158400.0,96.3],["43047288",202,"2026-03-10",58884.0,64627.2,95.9],["43047289",202,"2026-03-10",100634.0,105600.0,95.9],["43047290",204,"2026-03-10",47277.0,50688.0,95.9],["43047291",204,"2026-03-10",23680.0,24921.6,95.9],["43047293",199,"2026-03-10",64652.0,67320.0,95.3],["43047294",207,"2026-03-10",51036.0,53856.0,95.7],["43047296",195,"2026-03-10",14481.0,15259.2,97.0],["43047305",151,"2026-03-10",27215.0,33660.0,94.7],["43047306",155,"2026-03-11",96736.0,103224.0,95.1],["43047309",218,"2026-03-11",134192.0,143167.2,97.0],["43047311",215,"2026-03-12",12595.0,13464.0,97.0],["43047310",217,"2026-03-12",21437.0,22440.0,95.3],["43047312",214,"2026-03-12",13866.0,17054.4,95.4],["43047313",212,"2026-03-12",51274.0,53856.0,95.3],["43047314",210,"2026-03-12",44070.0,47572.8,95.0],["43047315",213,"2026-03-12",49374.0,51612.0,95.4],["43047369",113,"2026-03-12",31813.0,33660.0,95.1],["43047370",112,"2026-03-12",140111.0,147840.0,95.5],["43047371",115,"2026-03-13",32575.0,35006.4,95.7],["43047372",114,"2026-03-13",261941.0,278256.0,96.0],["43047373",35,"2026-03-13",400657.0,424564.8,96.0],["43047374",31,"2026-03-14",22728.0,24235.2,96.0],["43047375",41,"2026-03-14",36833.0,39045.6,95.9],["43047376",40,"2026-03-14",30682.0,32313.6,96.0],["43047378",38,"2026-03-14",99635.0,105916.8,95.9],["43047377",37,"2026-03-15",28176.0,30069.6,96.0],["43047277",37,"2026-03-15",20698.0,21780.0,96.0],["43047379",46,"2026-03-16",198095.0,208692.0,97.4],["43047380",44,"2026-03-16",33562.0,35191.2,97.4],["43047381",42,"2026-03-16",60666.0,64033.2,97.4],["43047382",51,"2026-03-16",41979.0,44431.2,97.4],["43047420",50,"2026-03-16",29704.0,31680.0,97.4],["43047384",45,"2026-03-16",22196.0,23733.6,97.0],["43047385",24,"2026-03-16",30176.0,34108.8,95.4],["43047386",23,"2026-03-17",31430.0,35006.4,95.1],["43047387",22,"2026-03-17",131222.0,138230.4,95.1],["43047388",5,"2026-03-17",21826.0,24235.2,97.0],["43047389",4,"2026-03-17",32612.0,34108.8,97.0],["43047390",3,"2026-03-17",33628.0,35006.4,97.0],["43047422",26,"2026-03-17",31181.0,34108.8,93.5],["43047423",29,"2026-03-18",64080.0,69564.0,93.4],["43047425",27,"2026-03-18",28796.0,30967.2,94.9],["43047442",145,"2026-03-18",77243.0,82579.2,95.7],["43047443",143,"2026-03-19",218768.0,233376.0,96.0],["43047444",19,"2026-03-19",96728.0,103672.8,94.8],["43047445",2,"2026-03-20",23219.0,24235.2,97.0],["43047446",1,"2026-03-20",31956.0,34108.8,97.0],["43047441",18,"2026-03-20",60189.0,64627.2,94.8],["43047447",17,"2026-03-20",70581.0,76744.8,95.3],["43047448",0,"2026-03-20",37413.0,39494.4,97.0],["43047449",155,"2026-03-20",79697.0,85272.0,95.1],["43047450",154,"2026-03-21",29390.0,33660.0,95.4],["43047451",153,"2026-03-21",138442.0,147206.4,95.6],["43047504",56,"2026-03-21",116019.0,124581.6,95.0],["43047505",54,"2026-03-21",28894.0,30492.0,95.0],["43047506",52,"2026-03-21",43632.0,46173.6,95.0],["43047507",62,"2026-03-22",46409.0,49104.0,95.0],["43047509",174,"2026-03-22",85103.0,90657.6,94.7],["43047508",173,"2026-03-23",36931.0,39494.4,94.7],["43047510",217,"2026-03-23",37754.0,39494.4,95.3],["43047511",214,"2026-03-23",15796.0,17054.4,95.4],["43047512",212,"2026-03-23",41001.0,43533.6,95.3],["43047513",210,"2026-03-23",27169.0,28274.4,95.0],["43047514",213,"2026-03-23",41920.0,44431.2,95.4],["43047515",171,"2026-03-23",29430.0,34557.6,97.0],["43047516",160,"2026-03-23",73505.0,78988.8,94.3],["43047517",161,"2026-03-24",32266.0,34108.8,94.3],["43047518",163,"2026-03-24",30612.0,33792.0,95.1],["43047519",164,"2026-03-24",51514.0,55334.4,95.1],["43047520",165,"2026-03-24",32531.0,33792.0,95.1],["43047528",108,"2026-03-24",18825.0,20644.8,95.4],["43047521",108,"2026-03-24",21485.0,21964.8,95.4],["43047522",11,"2026-03-24",309972.0,327624.0,96.0],["43047555",16,"2026-03-25",59427.0,63729.6,95.4],["43047561",15,"2026-03-25",44839.0,48470.4,95.3],["43047548",14,"2026-03-26",211956.0,225746.4,95.7],["43047549",19,"2026-03-26",121083.0,128805.6,94.8],["43047550",18,"2026-03-27",61451.0,65076.0,94.8],["43047551",17,"2026-03-27",110244.0,117136.8,95.3],["43047562",158,"2026-03-27",54634.0,64178.4,97.0],["43047566",202,"2026-03-28",116140.0,119961.6,95.9],["43047565",204,"2026-03-28",113162.0,120806.4,95.9],["43047567",202,"2026-03-28",147323.0,155020.8,95.9],["43047564",198,"2026-03-28",111978.0,125452.8,97.0],["43047625",199,"2026-03-30",75622.0,80143.4,95.3],["43047623",199,"2026-03-30",4045.0,4488.0,95.3],["43047610",194,"2026-03-30",43198.0,45080.6,95.8],["43047292",194,"2026-03-30",9176.0,9873.6,95.8],["43047626",199,"2026-03-30",93664.0,99184.8,95.3],["43047612",12,"2026-03-30",31785.0,33625.6,95.8],["43047609",11,"2026-03-30",236617.0,244467.2,96.0],["43047640",11,"2026-03-30",62230.0,64524.8,96.0],["43047673",199,"2026-03-31",29671.0,33369.6,95.3],["43047613",119,"2026-03-31",31918.0,33739.2,96.7],["43047614",177,"2026-03-31",37383.0,39106.8,96.0],["43047615",179,"2026-03-31",18890.0,27221.4,95.9],["43047713",129,"2026-04-01",57965.0,59810.4,96.6],["43047741",129,"2026-04-01",23694.0,26413.2,96.6],["43047712",179,"2026-04-01",122809.0,114636.6,95.9],["43047717",128,"2026-04-01",48423.0,53164.8,96.3],["43047718",132,"2026-04-02",31842.0,33625.6,96.4],["43047719",136,"2026-04-02",101118.0,101785.6,96.5],["43047850",37,"2026-04-17",28090.0,16156.8,96.0],["43047859",70,"2026-04-18",133381.0,156710.4,96.0],["43047863",67,"2026-04-18",301362.0,344678.4,96.0],["43047862",64,"2026-04-20",74756.0,81681.6,96.0],["43047861",73,"2026-04-20",53377.0,61934.4,94.0],["43047871",97,"2026-04-20",44099.0,55756.8,97.0],["43047894",71,"2026-04-21",22172.0,23232.0,97.0],["43047872",56,"2026-04-21",151443.0,158994.0,95.0],["43047873",54,"2026-04-21",40600.0,43560.0,95.0],["43047874",52,"2026-04-21",51964.0,55756.8,95.0],["43047875",62,"2026-04-21",20937.0,22176.0,95.0],["43047877",57,"2026-04-21",36661.0,39639.6,95.0],["43047878",96,"2026-04-22",54152.0,57499.2,97.0],["43047879",100,"2026-04-22",21756.0,22440.0,97.0],["43047882",144,"2026-04-22",82474.0,94696.8,96.0],["43047881",98,"2026-04-22",113657.0,122760.0,97.0],["43047884",35,"2026-04-23",243374.0,256264.8,96.0],["43047886",40,"2026-04-23",27312.0,28723.2,96.0],["43047887",38,"2026-04-23",21744.0,22888.8,95.9],["43047888",182,"2026-04-23",78665.0,84374.4,95.2],["43047890",184,"2026-04-24",55206.0,59241.6,95.2],["43047889",183,"2026-04-24",46225.0,49368.0,95.2],["43047891",190,"2026-04-24",144186.0,152592.0,95.0],["43047930",99,"2026-04-24",8962.0,9873.6,97.0],["43047964",190,"2026-04-24",54332.0,57420.0,95.0],["43047892",206,"2026-04-24",58429.0,62515.2,95.9],["43047931",46,"2026-04-25",356592.0,372781.2,97.4],["43047932",44,"2026-04-26",75717.0,79384.8,97.4],["43047933",42,"2026-04-26",109170.0,114998.4,97.4],["43047934",51,"2026-04-27",170115.0,179071.2,97.4],["43047935",50,"2026-04-27",38878.0,40788.0,97.4],["43047936",49,"2026-04-27",31038.0,32670.0,97.4],["43047937",48,"2026-04-27",36452.0,38055.6,97.4],["43047938",47,"2026-04-27",68971.0,73246.8,97.0],["43047958",14,"2026-04-27",280639.0,298003.2,95.7],["43047974",202,"2026-04-28",95184.0,100953.6,95.9],["43047959",140,"2026-04-28",35826.0,38596.8,95.1],["43047960",139,"2026-04-29",121702.0,128356.8,95.4],["43047961",150,"2026-04-29",115864.0,129254.4,95.5],["43047962",19,"2026-04-29",57269.0,63280.8,94.8],["43047963",17,"2026-04-30",220339.0,232029.6,95.3],["43048033",72,"2026-04-30",4030.0,422.4,96.0],["43048034",64,"2026-04-30",5171.0,422.4,96.0],["43048066",65,"2026-04-30",13219.0,844.8,94.0],["43048067",134,"2026-05-02",33168.0,35904.0,95.8],["43048069",142,"2026-05-02",29176.0,34557.6,96.2],["43048020",202,"2026-05-02",102398.0,106867.2,95.9],["43048021",204,"2026-05-04",113342.0,120806.4,95.9],["43048078",204,"2026-05-04",80482.0,89311.2,95.9],["43048025",25,"2026-05-05",31019.0,33211.2,94.1],["43048027",29,"2026-05-05",23177.0,26030.4,93.4],["43048026",28,"2026-05-05",24256.0,25132.8,93.4],["43048028",27,"2026-05-05",175227.0,186252.0,94.9],["43048111",7,"2026-05-05",10547.0,11220.0,97.0],["43048029",24,"2026-05-05",35402.0,38148.0,95.4],["43048030",23,"2026-05-06",64417.0,67320.0,95.1],["43048031",22,"2026-05-06",108951.0,120278.4,95.1],["43048064",89,"2026-05-06",54761.0,58515.6,96.0],["43048145",89,"2026-05-07",58484.0,62607.6,96.0],["43048044",94,"2026-05-07",55225.0,59334.0,97.0],["43048045",72,"2026-05-07",117790.0,124317.6,96.0],["43048046",173,"2026-05-07",38213.0,42187.2,94.7],["43048047",174,"2026-05-07",21184.0,22440.0,94.7],["43048051",217,"2026-05-08",51445.0,54304.8,95.3],["43048048",219,"2026-05-08",63844.0,64178.4,97.0],["43048050",215,"2026-05-08",18492.0,19747.2,97.0],["43048049",213,"2026-05-08",23266.0,24684.0,95.4],["43048059",96,"2026-05-08",52718.0,56628.0,97.0],["43048060",56,"2026-05-08",82419.0,91476.0,95.0],["43048184",59,"2026-05-08",12378.0,435.6,95.0],["43048154",35,"2026-05-08",304284.0,319994.4,96.0],["43048155",31,"2026-05-09",18340.0,19747.2,96.0],["43048156",40,"2026-05-09",47465.0,49368.0,96.0],["43048157",38,"2026-05-09",36840.0,38596.8,95.9],["43048175",34,"2026-05-09",20593.0,22440.0,95.0],["43048158",32,"2026-05-09",34665.0,37250.4,95.0],["43048159",11,"2026-05-10",231217.0,245493.6,96.0],["43048160",141,"2026-05-11",37328.0,42636.0,96.3],["43048162",102,"2026-05-12",107371.0,114457.2,96.7],["43048200",102,"2026-05-12",15366.0,17226.0,96.7],["43048161",126,"2026-05-12",17770.0,23733.6,96.8],["43048163",179,"2026-05-13",70392.0,75028.8,95.9],["43048202",178,"2026-05-13",15870.0,16843.2,96.0],["43048164",129,"2026-05-13",34358.0,34834.8,96.6],["43048218",103,"2026-05-13",12588.0,14163.6,96.6],["43048165",103,"2026-05-14",22135.0,23232.0,96.6],["43048167",123,"2026-05-14",32816.0,35059.2,96.6],["43048170",135,"2026-05-14",20560.0,22387.2,96.6],["43048219",135,"2026-05-14",34103.0,37171.2,96.6],["43048220",135,"2026-05-14",18147.0,19140.0,96.6],["43048222",8,"2026-05-14",25152.0,26796.0,96.3],["43048203",180,"2026-05-15",101456.0,107712.0,95.8],["43048204",187,"2026-05-15",33478.0,35006.4,95.9],["43048205",9,"2026-05-15",143433.0,145411.2,96.3],["43048208",56,"2026-05-15",291759.0,307098.0,95.0],["43048209",61,"2026-05-16",59739.0,63280.8,95.0],["43048210",59,"2026-05-16",74603.0,78988.8,95.0],["43048228",67,"2026-05-16",281813.0,296102.4,96.0],["43048229",65,"2026-05-18",36562.0,39204.0,94.0],["43048230",73,"2026-05-18",41308.0,44431.2,94.0],["43048231",72,"2026-05-18",21169.0,22440.0,96.0],["43048206",145,"2026-05-18",29250.0,33211.2,95.7],["43048207",143,"2026-05-18",56998.0,60588.0,96.0],["43048232",35,"2026-05-18",295562.0,306081.6,96.0],["43048233",31,"2026-05-19",50425.0,53856.0,96.0],["43048234",41,"2026-05-19",45175.0,46226.4,95.9],["43048235",40,"2026-05-19",52366.0,54753.6,96.0],["43048236",38,"2026-05-20",38195.0,39494.4,95.9],["43048237",37,"2026-05-20",61691.0,63729.6,96.0],["43048238",201,"2026-05-20",30901.0,38438.4,97.0],["43048254",202,"2026-05-20",324547.0,337920.0,95.9],["43048022",194,"2026-05-21",67901.0,70963.2,95.8],["43048297",202,"2026-05-21",60535.0,62515.2,95.9],["43048256",199,"2026-05-21",31196.0,33211.2,95.3],["43048257",207,"2026-05-21",99387.0,104121.6,95.7],["43048258",12,"2026-05-21",28471.0,30069.6,95.8],["43048259",11,"2026-05-21",287396.0,300247.2,96.0],["43048260",89,"2026-05-22",91451.0,98208.0,96.0],["43048315",92,"2026-05-23",39126.0,41329.2,96.0],["43048263",64,"2026-05-23",182100.0,169197.6,96.0],["43048261",67,"2026-05-23",234775.0,247104.0,96.0],["43048262",65,"2026-05-24",141114.0,152064.0,94.0],["43048264",73,"2026-05-25",126297.0,133293.6,94.0],["43048316",72,"2026-05-25",104172.0,109692.0,96.0],["43048317",72,"2026-05-25",19170.0,19166.4,96.0],["43048265",70,"2026-05-25",116377.0,125452.8,96.0],["43048266",16,"2026-05-26",42737.0,43982.4,95.4],["43048267",15,"2026-05-26",42613.0,44880.0,95.3],["43048268",14,"2026-05-26",199076.0,212282.4,95.7],["43048318",202,"2026-05-26",169189.0,178675.2,95.9],["43048319",141,"2026-05-27",23533.0,34108.8,96.3],["43048320",35,"2026-05-27",158826.0,167851.2,96.0],["43048321",33,"2026-05-28",23699.0,25581.6,96.0],["43048322",31,"2026-05-28",49015.0,52060.8,96.0],["43048323",41,"2026-05-28",28344.0,30069.6,95.9],["43048324",40,"2026-05-28",60351.0,63729.6,96.0],["43048325",38,"2026-05-28",19147.0,19747.2,95.9],["43048390",38,"2026-05-28",52190.0,54885.6,95.9],["43048389",31,"2026-05-28",17261.0,18004.8,96.0],["43048369",113,"2026-05-28",31454.0,33211.2,95.1],["43048406",112,"2026-05-29",31382.0,32947.2,95.5],["43048371",116,"2026-05-29",73021.0,76744.8,95.2],["43048372",115,"2026-05-29",40544.0,43084.8,95.7],["43048373",114,"2026-05-29",114878.0,118932.0,96.0],["43048374",217,"2026-05-29",187027.0,197472.0,95.3],["43048375",211,"2026-05-30",51986.0,55202.4,95.3],["43048376",56,"2026-05-30",287576.0,301870.8,95.0],["43048377",54,"2026-05-31",40920.0,43124.4,95.0],["43048378",52,"2026-05-31",88976.0,91040.4,95.0],["43048527",62,"2026-06-01",68819.0,63360.0,95.0],["43048528",61,"2026-06-01",38315.0,40392.0,95.0],["43048529",145,"2026-06-01",77660.0,82579.2,95.7],["43048544",79,"2026-06-01",171585.0,182952.0,96.0],["43048543",77,"2026-06-02",36537.0,38332.8,96.0],["43048545",78,"2026-06-02",181521.0,191268.0,96.0],["43048535",170,"2026-06-03",12391.0,19008.0,97.0],["43048536",161,"2026-06-03",31883.0,34108.8,94.3],["43048537",160,"2026-06-03",33221.0,34557.6,94.3],["43048538",164,"2026-06-03",65580.0,68428.8,95.1],["43048539",163,"2026-06-03",22038.0,22809.6,95.1],["43048540",101,"2026-06-03",21589.0,24684.0,97.0],["43048594",167,"2026-06-03",30899.0,33211.2,95.3],["43048548",20,"2026-06-03",60537.0,64178.4,94.6],["43048549",19,"2026-06-04",90761.0,96940.8,94.8],["43048550",18,"2026-06-04",155618.0,166056.0,94.8],["43048551",17,"2026-06-05",263497.0,280051.2,95.3],["43048631",204,"2026-06-05",40141.0,44431.2,95.9],["43048652",202,"2026-06-06",68569.0,71808.0,95.9],["43048554",202,"2026-06-06",73815.0,76876.8,95.9],["43048555",194,"2026-06-06",17914.0,18585.6,95.8],["43048556",199,"2026-06-06",30980.0,34557.6,95.3],["43048557",207,"2026-06-06",32963.0,34557.6,95.7],["43048558",193,"2026-06-06",18910.0,20644.8,97.0],["43048559",192,"2026-06-06",19066.0,20196.0,97.0],["43048578",105,"2026-06-06",21155.0,22440.0,95.5],["43048560",11,"2026-06-07",311918.0,327175.2,96.0],["43048573",152,"2026-06-08",63335.0,67768.8,94.5],["43048574",151,"2026-06-09",51289.0,54304.8,94.7],["43048575",155,"2026-06-09",50770.0,53856.0,95.1],["43048576",154,"2026-06-09",53643.0,58792.8,95.4],["43048577",153,"2026-06-09",80574.0,85720.8,95.6],["43048633",204,"2026-06-09",80466.0,85747.2,95.9],["43048634",202,"2026-06-10",128605.0,135590.4,95.9],["43048661",134,"2026-06-10",20250.0,21542.4,95.8],["43048662",138,"2026-06-10",20300.0,21542.4,96.0],["43048552",99,"2026-06-10",46773.0,49368.0,97.0],["43048636",189,"2026-06-10",8448.0,8527.2,95.0],["43048637",183,"2026-06-10",63841.0,68217.6,95.2],["43048638",185,"2026-06-11",22745.0,24684.0,95.2],["43048639",184,"2026-06-11",66105.0,68666.4,95.2],["43048640",182,"2026-06-11",88639.0,95145.6,95.2],["43048641",181,"2026-06-11",33716.0,36352.8,95.3],["43048635",141,"2026-06-11",117918.0,129703.2,96.3],["43048642",143,"2026-06-12",102283.0,108160.8,96.0],["43048677",55,"2026-06-12",22233.0,23958.0,95.0],["43048678",53,"2026-06-13",22921.0,23958.0,96.0],["43048679",54,"2026-06-13",99371.0,105850.8,95.0],["43048680",61,"2026-06-13",140562.0,137332.8,95.0],["43048681",59,"2026-06-13",121034.0,129373.2,95.0],["43048682",219,"2026-06-13",20397.0,22440.0,97.0],["43048683",215,"2026-06-13",21288.0,22440.0,97.0],["43048684",216,"2026-06-14",32360.0,36326.4,96.6],["43048685",78,"2026-06-14",107368.0,113256.0,96.0],["43048686",76,"2026-06-15",49295.0,52272.0,96.0],["43048687",74,"2026-06-15",70920.0,76520.4,96.0],["43048688",90,"2026-06-15",32951.0,36009.6,96.0],["43048690",95,"2026-06-15",21144.0,22968.0,97.0],["43048691",93,"2026-06-15",20842.0,22506.0,97.0],["43048692",89,"2026-06-15",34147.0,36828.0,96.0],["43048689",8,"2026-06-15",120003.0,124608.0,96.3],["43048698",135,"2026-06-16",107954.0,113203.2,96.6],["43048696",131,"2026-06-16",32530.0,34214.4,96.5],["43048697",130,"2026-06-17",100242.0,106444.8,96.6],["43048695",120,"2026-06-17",44824.0,42240.0,96.3],["43048752",103,"2026-06-17",21404.0,22809.6,96.6],["43048694",103,"2026-06-17",102499.0,108134.4,96.6],["43048758",9,"2026-06-17",16950.0,17740.8,96.3],["43048699",9,"2026-06-18",67222.0,69564.0,96.3],["43048700",180,"2026-06-18",145073.0,153040.8,95.8],["43048702",187,"2026-06-18",38070.0,39494.4,95.9],["43048703",188,"2026-06-18",21550.0,22440.0,95.9],["43048701",186,"2026-06-18",37749.0,39494.4,95.9],["43048733",126,"2026-06-18",59631.0,63544.8,96.8],["43048760",110,"2026-06-19",110903.0,116754.0,97.0],["43048730",179,"2026-06-19",371541.0,390456.0,95.9],["43048731",178,"2026-06-21",31926.0,33686.4,96.0],["43048801",176,"2026-06-21",25485.0,26796.0,96.0],["43048728",118,"2026-06-21",32844.0,34452.0,96.6],["43048729",127,"2026-06-22",44026.0,45936.0,96.5],["43048727",129,"2026-06-22",115692.0,122113.2,96.6],["43048762",16,"2026-06-22",50458.0,54304.8,95.4],["43048763",15,"2026-06-23",65957.0,70461.6,95.3],["43048764",14,"2026-06-23",187695.0,195676.8,95.7],["43048765",207,"2026-06-23",103139.0,108609.6,95.7],["43048766",199,"2026-06-24",74081.0,78988.8,95.3],["43048767",194,"2026-06-24",30998.0,32524.8,95.8],["43048768",202,"2026-06-24",166162.0,173184.0,95.9],["43048769",202,"2026-06-24",98892.0,102220.8,95.9],["43048770",204,"2026-06-25",161858.0,171916.8,95.9],["43048771",46,"2026-06-25",332999.0,353548.8,97.4],["43048823",44,"2026-06-26",81266.0,85522.8,97.4],["43048824",42,"2026-06-26",112321.0,118047.6,97.4],["43048825",51,"2026-06-26",160003.0,168300.0,97.4],["43048826",50,"2026-06-27",99495.0,104544.0,97.4],["43048827",49,"2026-06-27",157407.0,97574.4,97.4],["43048828",48,"2026-06-27",160198.0,166544.4,97.4],["43048829",45,"2026-06-28",54599.0,57697.2,97.0],["43048830",43,"2026-06-28",58365.0,61419.6,97.0],["43048831",34,"2026-06-29",27208.0,29620.8,95.0],["43048832",32,"2026-06-29",27626.0,29620.8,95.0],["43048882",32,"2026-06-29",8321.0,8870.4,95.0],["43048833",35,"2026-06-29",348997.0,365323.2,96.0],["43048834",33,"2026-06-29",60458.0,64178.4,96.0],["43048835",31,"2026-06-29",141751.0,148104.0,96.0],["43048836",41,"2026-06-30",62371.0,65524.8,95.9],["43048837",40,"2026-06-30",49394.0,51612.0,96.0],["43048838",38,"2026-06-30",77692.0,80784.0,95.9],["43048839",37,"2026-06-30",35603.0,37250.4,96.0],["43048888",34,"2026-06-30",35052.0,38280.0,95.0],["43048840",19,"2026-06-30",3300.0,4039.2,94.8],["43048978",19,"2026-07-01",322294.0,337946.4,94.8],["43048979",17,"2026-07-01",339863.0,357244.8,95.3],["43048859",173,"2026-07-02",91323.0,95145.6,94.7],["43048860",174,"2026-07-03",173827.0,182661.6,94.7],["43048861",175,"2026-07-03",121156.0,127908.0,94.7],["43049063",174,"2026-07-03",31479.0,33369.6,94.7],["43048863",56,"2026-07-03",324108.0,339332.4,95.0],["43048864",54,"2026-07-04",25339.0,26571.6,95.0],["43048865",62,"2026-07-04",94126.0,99792.0,95.0],["43048862",61,"2026-07-04",130338.0,135537.6,95.0],["43048866",59,"2026-07-05",91220.0,95145.6,95.0],["43048966",79,"2026-07-06",147866.0,158004.0,96.0],["43048965",77,"2026-07-06",8848.0,8712.0,96.0],["43048964",82,"2026-07-06",20975.0,22809.6,97.0],["43048967",78,"2026-07-06",122277.0,130680.0,96.0],["43048984",76,"2026-07-06",52308.0,55321.2,96.0],["43049067",12,"2026-07-06",70022.0,74949.6,95.8],["43049068",11,"2026-07-07",65203.0,67768.8,96.0],["43048969",141,"2026-07-07",52367.0,57446.4,96.3],["43048991",25,"2026-07-08",1541.0,1795.2,94.1],["43049087",25,"2026-07-08",34154.0,36352.8,94.1],["43048992",27,"2026-07-08",152727.0,164709.6,94.9],["43048993",7,"2026-07-08",31381.0,34108.8,97.0],["43049118",27,"2026-07-08",18509.0,19747.2,94.9],["43048988",112,"2026-07-08",52780.0,55756.8,95.5],["43049094",116,"2026-07-09",40171.0,42187.2,95.2],["43048989",115,"2026-07-09",41313.0,43084.8,95.7],["43048990",114,"2026-07-09",221930.0,232029.6,96.0],["43048985",21,"2026-07-09",37071.0,40392.0,94.7],["43048986",23,"2026-07-10",110912.0,116239.2,95.1],["43048987",22,"2026-07-10",50387.0,54304.8,95.1],["43048994",89,"2026-07-10",116162.0,125624.4,96.0],["43048995",87,"2026-07-11",31141.0,33686.4,96.0],["43048996",92,"2026-07-11",18551.0,22915.2,96.0],["43048997",91,"2026-07-11",30808.0,32762.4,97.0],["43049152",56,"2026-07-11",357856.0,372979.2,95.0],["43049154",96,"2026-07-12",23537.0,25132.8,97.0],["43049141",54,"2026-07-12",134404.0,134600.4,95.0],["43049153",52,"2026-07-13",67051.0,74342.4,95.0],["43049142",62,"2026-07-13",73319.0,78012.0,95.0],["43049143",61,"2026-07-13",83549.0,83925.6,95.0],["43049144",59,"2026-07-13",71460.0,74949.6,95.0],["43049168",59,"2026-07-13",17689.0,18585.6,95.0],["43049103",126,"2026-07-13",94661.0,101059.2,96.8],["43049104",122,"2026-07-14",33228.0,34834.8,96.6],["43049105",121,"2026-07-14",30864.0,32155.2,96.7],["43049171",102,"2026-07-14",23364.0,24116.4,96.7],["43049106",128,"2026-07-14",31829.0,33660.0,96.3],["43049107",137,"2026-07-15",38517.0,40392.0,96.4],["43049108",136,"2026-07-15",278754.0,291720.0,96.5],["43049145",205,"2026-07-15",30470.0,32524.8,97.0],["43049146",204,"2026-07-16",120859.0,128832.0,95.9],["43049156",200,"2026-07-16",32065.0,34108.8,95.3],["43049147",202,"2026-07-16",100780.0,107289.6,95.9],["43049148",202,"2026-07-16",108486.0,114048.0,95.9],["43049149",194,"2026-07-16",41564.0,43507.2,95.8],["43049150",199,"2026-07-16",113662.0,120727.2,95.3],["43049151",207,"2026-07-17",119980.0,126112.8,95.7],["43049186",42,"2026-07-17",77598.0,81457.2,97.4],["43049187",49,"2026-07-17",28791.0,30056.4,97.4],["43049215",67,"2026-07-17",28144.0,30492.0,96.0],["43049160",67,"2026-07-18",480700.0,506035.2,96.0],["43049161",65,"2026-07-18",102643.0,108900.0,94.0],["43049162",64,"2026-07-19",35297.0,37699.2,96.0],["43049163",73,"2026-07-19",127646.0,136884.0,94.0],["43049164",72,"2026-07-20",73689.0,77193.6,96.0],["43049096",66,"2026-07-20",23249.0,24948.0,97.0],["43049165",70,"2026-07-20",115829.0,122918.4,96.0],["43049157",217,"2026-07-20",71971.0,76296.0,95.3],["43049158",217,"2026-07-21",46875.0,48919.2,95.3],["43049159",213,"2026-07-21",35696.0,38148.0,95.4],["43049203",56,"2026-07-21",941013.0,977486.4,95.0],["43049204",54,"2026-07-23",244485.0,258746.4,95.0],["43049205",52,"2026-07-23",567629.0,594594.0,95.0],["43049206",62,"2026-07-25",520446.0,544500.0,95.0],["43049207",61,"2026-07-26",157109.0,161568.0,95.0],["43049208",59,"2026-07-27",81705.0,85720.8,95.0],["43049209",58,"2026-07-27",57886.0,62290.8,95.0],["43049283",62,"2026-07-27",77666.0,81972.0,95.0],["43049284",54,"2026-07-27",10124.0,10692.0,95.0],["43049210",78,"2026-07-28",774143.0,818136.0,96.0],["43049211",76,"2026-07-30",256467.0,270072.0,96.0],["43049243",74,"2026-07-30",318652.0,342909.6,96.0],["43049244",84,"2026-07-31",113350.0,118694.4,96.0],["43049433",83,"2026-07-31",84354.0,89548.8,96.0],["43049166",16,"2026-07-31",3267.0,4488.0,95.4],["43049329",16,"2026-08-01",88258.0,92901.6,95.4],["43049491",14,"2026-08-01",567452.0,592864.8,95.7],["43049331",47,"2026-08-03",95008.0,99435.6,97.0],["43049332",45,"2026-08-04",25128.0,26188.8,97.0],["43049333",43,"2026-08-04",38050.0,40075.2,97.0],["43049336",158,"2026-08-04",55543.0,59241.6,97.0],["43049337",141,"2026-08-04",6256.0,6732.0,96.3],["43049387",140,"2026-08-04",35439.0,37250.4,95.1],["43049388",139,"2026-08-05",140085.0,145411.2,95.4],["43049534",147,"2026-08-05",34358.0,36801.6,94.8],["43049389",146,"2026-08-05",31958.0,33660.0,95.2],["43049390",149,"2026-08-05",16442.0,21991.2,95.7],["43049335",48,"2026-08-05",59206.0,47876.4,97.4],["43049391",144,"2026-08-05",38756.0,42187.2,96.0],["43049392",143,"2026-08-06",89300.0,96043.2,96.0],["43049561",143,"2026-08-06",34442.0,36326.4,96.0],["43049398",79,"2026-08-06",224803.0,232848.0,96.0],["43049399",77,"2026-08-07",70225.0,74923.2,96.0],["43049393",78,"2026-08-07",120174.0,126324.0,96.0],["43049394",84,"2026-08-07",36104.0,38438.4,96.0],["43049395",83,"2026-08-07",29431.0,31680.0,96.0],["43049396",81,"2026-08-07",17072.0,16896.0,96.0],["43049604",85,"2026-08-07",21721.0,422.4,97.0],["43049400",67,"2026-08-07",239372.0,246681.6,96.0],["43049401",65,"2026-08-08",135984.0,143748.0,94.0],["43049402",64,"2026-08-08",105341.0,110404.8,96.0],["43049403",73,"2026-08-10",86610.0,90657.6,94.0],["43049404",72,"2026-08-10",124254.0,130152.0,96.0],["43049405",70,"2026-08-10",110450.0,116160.0,96.0],["43049589",56,"2026-08-10",359242.0,375051.6,95.0],["43049607",54,"2026-08-11",81186.0,86248.8,95.0],["43049407",24,"2026-08-11",40542.0,43084.8,95.4],["43049408",23,"2026-08-12",45766.0,48021.6,95.1],["43049409",22,"2026-08-12",193749.0,205999.2,95.1],["43049590",32,"2026-08-12",29325.0,31416.0,95.0],["43049638",39,"2026-08-13",22231.0,23337.6,97.0],["43049639",35,"2026-08-13",47688.0,50265.6,96.0],["43049591",33,"2026-08-13",51850.0,54304.8,96.0],["43049592",31,"2026-08-13",98575.0,102775.2,96.0],["43049593",38,"2026-08-13",46625.0,45328.8,95.9],["43049594",204,"2026-08-13",54818.0,58713.6,95.9],["43049685",204,"2026-08-13",24686.0,27376.8,95.9],["43049596",202,"2026-08-14",120129.0,125452.8,95.9],["43049597",194,"2026-08-14",40542.0,42240.0,95.8],["43049640",196,"2026-08-14",28541.0,30835.2,97.0],["43049598",199,"2026-08-14",101464.0,107263.2,95.3],["43049698",202,"2026-08-14",73372.0,77721.6,95.9],["43049708",211,"2026-08-15",18324.0,19747.2,95.3],["43049586",217,"2026-08-15",31019.0,32313.6,95.3],["43049587",217,"2026-08-15",31214.0,32313.6,95.3],["43049588",213,"2026-08-15",28183.0,1795.2,95.4],["43049585",219,"2026-08-15",26831.0,29620.8,97.0],["43049612",58,"2026-08-15",36319.0,38332.8,95.0],["43049611",59,"2026-08-15",137605.0,145411.2,95.0],["43049608",54,"2026-08-17",101987.0,108900.0,95.0],["43049609",52,"2026-08-17",45399.0,48351.6,95.0],["43049610",61,"2026-08-17",52172.0,52958.4,95.0],["43049641",60,"2026-08-17",29466.0,30967.2,97.0],["43049613",109,"2026-08-17",62552.0,66422.4,94.2],["43049614",109,"2026-08-17",41240.0,43084.8,94.2],["43049669",126,"2026-08-18",130016.0,136276.8,96.8],["43049668",110,"2026-08-18",107918.0,114840.0,97.0],["43049670",177,"2026-08-19",31901.0,33686.4,96.0],["43049671",129,"2026-08-19",26065.0,27561.6,96.6],["43049772",8,"2026-08-20",20676.0,21054.0,96.3],["43049738",8,"2026-08-20",75009.0,60403.2,96.3],["43049674",157,"2026-08-20",61929.0,65894.4,96.5],["43049675",135,"2026-08-20",14086.0,14784.0,96.6],["43049710",213,"2026-08-20",30009.0,435.6,95.4],["43049776",124,"2026-08-20",21192.0,22387.2,96.5],["43049677",124,"2026-08-21",9464.0,9873.6,96.5],["43049676",180,"2026-08-21",105158.0,110404.8,95.8],["43049739",9,"2026-08-21",151691.0,157528.8,96.3],["43049779",9,"2026-08-21",14123.0,13516.8,96.3],["43049615",100,"2026-08-21",32529.0,34557.6,97.0],["43049740",56,"2026-08-22",402508.0,422532.0,95.0],["43049741",54,"2026-08-24",100090.0,106722.0,95.0],["43049742",52,"2026-08-24",82345.0,86684.4,95.0],["43049743",61,"2026-08-24",89597.0,93799.2,95.0],["43049744",59,"2026-08-24",80972.0,84823.2,95.0],["43049745",58,"2026-08-24",31130.0,32670.0,95.0],["43049746",67,"2026-08-24",144623.0,151219.2,96.0],["43049747",65,"2026-08-25",77488.0,82368.0,94.0],["43049748",64,"2026-08-25",74542.0,78988.8,96.0],["43049749",73,"2026-08-25",41623.0,43084.8,94.0],["43049750",72,"2026-08-25",40491.0,43533.6,96.0],["43049751",70,"2026-08-25",51127.0,54067.2,96.0],["43049757",41,"2026-08-25",117129.0,122971.2,95.9],["43049758",40,"2026-08-26",101359.0,105468.0,96.0],["43049831",38,"2026-08-26",9295.0,4488.0,95.9],["43049832",38,"2026-08-26",19155.0,20275.2,95.9],["43049759",38,"2026-08-26",49110.0,51612.0,95.9],["43049760",37,"2026-08-26",179027.0,188047.2,96.0],["43049756",31,"2026-08-27",30950.0,33211.2,96.0],["43049755",33,"2026-08-27",232159.0,248635.2,96.0],["43049754",35,"2026-08-27",1238139.0,1298827.2,96.0],["43049887",35,"2026-08-31",200519.0,208692.0,96.0],["43049985",141,"2026-09-01",172041.0,183559.2,96.3],["43049890",18,"2026-09-01",188962.0,206448.0,94.8],["43049891",17,"2026-09-02",49750.0,54304.8,95.3],["43049892",89,"2026-09-02",30155.0,32736.0,96.0],["43049893",86,"2026-09-03",32792.0,35481.6,96.0],["43049894",91,"2026-09-03",65420.0,69564.0,97.0],["43049895",79,"2026-09-03",22372.0,23760.0,96.0],["43049896",75,"2026-09-03",81088.0,87159.6,96.0],["43049897",80,"2026-09-03",41019.0,43560.0,96.0],["43049899",76,"2026-09-03",58095.0,61855.2,96.0],["43049900",74,"2026-09-03",119180.0,126852.0,96.0],["43049901",84,"2026-09-04",52602.0,48153.6,96.0],["43049903",81,"2026-09-04",91541.0,97574.4,96.0],["43049898",78,"2026-09-04",48503.0,52272.0,96.0],["43049902",68,"2026-09-04",32715.0,35481.6,96.0],["43049904",67,"2026-09-04",158000.0,166848.0,96.0],["43049905",65,"2026-09-05",57807.0,60192.0,94.0],["43049906",73,"2026-09-05",105855.0,112648.8,94.0],["43049907",72,"2026-09-05",32878.0,34557.6,96.0],["43049908",70,"2026-09-05",60092.0,63360.0,96.0],["43050100",69,"2026-09-05",30975.0,32102.4,96.0],["43049910",56,"2026-09-07",571781.0,599821.2,95.0],["43049911",54,"2026-09-08",78831.0,83199.6,95.0],["43049912",52,"2026-09-08",85473.0,89733.6,95.0],["43049913",61,"2026-09-08",114737.0,118483.2,95.0],["43049914",217,"2026-09-08",37345.0,39045.6,95.3],["43050117",217,"2026-09-08",5150.0,5385.6,95.3],["43049992",210,"2026-09-08",78084.0,84374.4,95.0],["43049993",109,"2026-09-08",55298.0,59241.6,94.2],["43049994",144,"2026-09-09",31437.0,33211.2,96.0],["43049995",143,"2026-09-09",77203.0,81232.8,96.0],["43050122",11,"2026-09-09",195584.0,203306.4,96.0],["43050004",204,"2026-09-10",96927.0,102220.8,95.9],["43050152",202,"2026-09-10",61746.0,65472.0,95.9],["43050006",199,"2026-09-10",62648.0,66422.4,95.3],["43050007",207,"2026-09-10",56984.0,59241.6,95.7],["43050008",208,"2026-09-10",90265.0,93799.2,95.7],["43050009",189,"2026-09-10",38518.0,40392.0,95.0],["43050010",191,"2026-09-10",40563.0,43084.8,95.0],["43050011",190,"2026-09-11",102940.0,108160.8,95.0],["43050012",182,"2026-09-11",140465.0,148104.0,95.2],["43050013",184,"2026-09-14",24176.0,26030.4,95.2],["43050165",184,"2026-09-14",10239.0,9292.8,95.2],["43050014",183,"2026-09-14",168893.0,177276.0,95.2],["43049996",170,"2026-09-14",37605.0,45619.2,97.0],["43049997",169,"2026-09-14",29278.0,33792.0,95.5],["43049998",160,"2026-09-14",66551.0,71808.0,94.3],["43049999",159,"2026-09-15",31153.0,33211.2,94.3],["43050000",161,"2026-09-15",31045.0,33211.2,94.3],["43050002",164,"2026-09-15",28155.0,30835.2,95.1],["43050123",16,"2026-09-15",60864.0,64627.2,95.4],["43050124",15,"2026-09-15",101080.0,108160.8,95.3],["43050197",14,"2026-09-16",119340.0,124317.6,95.7],["43050126",33,"2026-09-16",68506.0,72705.6,96.0],["43050127",31,"2026-09-16",65970.0,69115.2,96.0],["43050128",41,"2026-09-17",60059.0,62832.0,95.9],["43050129",40,"2026-09-17",91214.0,95145.6,96.0],["43050130",38,"2026-09-17",80651.0,84374.4,95.9],["43050131",37,"2026-09-17",14972.0,15259.2,96.0],["43050170",129,"2026-09-21",159519.0,168432.0,96.6],["43050172",156,"2026-09-22",32091.0,34452.0,96.7],["43050171",111,"2026-09-22",84914.0,88044.0,97.0],["43050173",127,"2026-09-22",40716.0,42490.8,96.5]]};
+
+const GRUPOS = ["B Hormigón","Redondo liso","Plana","Ángulo","Cuadrado","Estrella","Saferock","Hexágono"];
+const GCOLOR = Object.fromEntries(GRUPOS.map((g,i)=>[g,`var(--g${i+1})`]));
+const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const SVGNS = "http://www.w3.org/2000/svg";
+
+// ---------- datos ----------
+const PROD = DATOS.productos;
+const ORD = DATOS.ordenes.map(([o,pi,d,kp,kc,meta]) => {
+  const p = PROD[pi];
+  return { o, p, pi, d, anio: +d.slice(0,4), mes: +d.slice(5,7), kp, kc, meta, r: kp/kc*100, grupo: p.grupo };
+});
+const VALIDAS = ORD.filter(x => x.r <= 100);
+const EXCLUIDAS = ORD.filter(x => x.r > 100);
+const ANIOS = [...new Set(ORD.map(x=>x.anio))].sort();
+
+// ---------- estado ----------
+const est = { anio: ANIOS[ANIOS.length-1], desde: 1, hasta: 12, vista: "mes", grupos: new Set(GRUPOS), prod: "", orden: "kg" };
+
+// ---------- utilidades ----------
+const nf1 = new Intl.NumberFormat("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1});
+const nf2 = new Intl.NumberFormat("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2});
+const nf0 = new Intl.NumberFormat("es-CL",{maximumFractionDigits:0});
+const pct = v => v==null||isNaN(v) ? "—" : nf2.format(v)+" %";
+const kg = v => nf0.format(v)+" kg";
+const ton = v => v>=1e6 ? nf1.format(v/1e6)+" mil t" : v>=1e3 ? nf0.format(v/1e3)+" t" : nf0.format(v)+" kg";
+const fecha = d => { const [y,m,dd]=d.split("-"); return `${+dd} ${MESES[+m-1]} ${y}`; };
+
+function el(tag, attrs={}, text) {
+  const n = tag.startsWith("svg:") ? document.createElementNS(SVGNS, tag.slice(4)) : document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) if (v!=null) n.setAttribute(k, v);
+  if (text!=null) n.textContent = text;
+  return n;
+}
+const s = (tag, attrs, text) => el("svg:"+tag, attrs, text);
+
+function agregar(lista) {
+  let kp=0, kc=0, metaNum=0, metaDen=0;
+  for (const x of lista) { kp+=x.kp; kc+=x.kc; if (x.meta) { metaNum+=x.meta*x.kc; metaDen+=x.kc; } }
+  return { kp, kc, cnt: lista.length, r: kc ? kp/kc*100 : null, meta: metaDen ? metaNum/metaDen : null };
+}
+function agrupar(lista, clave) {
+  const m = new Map();
+  for (const x of lista) { const k = clave(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); }
+  return m;
+}
+function escala(d0, d1, r0, r1) { const f = v => r0 + (v-d0)/(d1-d0||1)*(r1-r0); f.inv = p => d0 + (p-r0)/(r1-r0)*(d1-d0); return f; }
+function ticks(min, max, n=5) {
+  const paso0 = (max-min)/n, mag = Math.pow(10, Math.floor(Math.log10(paso0||1)));
+  const paso = [1,2,2.5,5,10].map(k=>k*mag).find(k=>k>=paso0) || mag*10;
+  const out=[]; for (let v=Math.ceil(min/paso)*paso; v<=max+1e-9; v+=paso) out.push(+v.toFixed(6)); return out;
+}
+function anchoDe(node, def=800) { return Math.max(280, node.clientWidth || def); }
+
+// ---------- tooltip ----------
+const tip = document.getElementById("tip");
+function mostrarTip(ev, titulo, filas) {
+  tip.replaceChildren();
+  tip.append(el("div",{class:"t"},titulo));
+  for (const [lbl, val, color] of filas) {
+    const r = el("div",{class:"r"});
+    const sp = el("span");
+    if (color) { const k = el("i",{class:"k-line"}); k.style.borderColor = color; sp.append(k); }
+    sp.append(document.createTextNode(lbl));
+    r.append(sp, el("b",{},val));
+    tip.append(r);
+  }
+  tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+  tip.style.left = x+"px"; tip.style.top = y+"px";
+}
+const ocultarTip = () => tip.style.display = "none";
+
+// ---------- filtros ----------
+function filtrar(lista, {sinProd=false, sinGrupo=false, sinPeriodo=false}={}) {
+  return lista.filter(x =>
+    x.anio === est.anio &&
+    (sinPeriodo || (x.mes >= est.desde && x.mes <= est.hasta)) &&
+    (sinGrupo || est.grupos.has(x.grupo)) &&
+    (sinProd || !est.prod || x.p.n === est.prod));
+}
+
+function initFiltros() {
+  const fa = document.getElementById("f-anio");
+  ANIOS.forEach(a => fa.append(el("option",{value:a},a)));
+  fa.value = est.anio;
+  fa.onchange = () => { est.anio = +fa.value; mesesDisponibles(); render(); };
+  const fd = document.getElementById("f-desde"), fh = document.getElementById("f-hasta");
+  fd.onchange = () => { est.desde = +fd.value; if (est.hasta < est.desde) { est.hasta = est.desde; fh.value = est.hasta; } render(); };
+  fh.onchange = () => { est.hasta = +fh.value; if (est.desde > est.hasta) { est.desde = est.hasta; fd.value = est.desde; } render(); };
+  mesesDisponibles();
+
+  document.querySelectorAll("#f-vista button").forEach(b => b.onclick = () => { est.vista = b.dataset.v; render(); });
+  document.querySelectorAll("#f-orden button").forEach(b => b.onclick = () => { est.orden = b.dataset.v; render(); });
+
+  const fg = document.getElementById("f-grupos");
+  const conDatos = new Set(ORD.map(x=>x.grupo));
+  GRUPOS.forEach(g => {
+    const b = el("button",{class:"chip",type:"button","data-g":g});
+    const i = el("i"); i.style.background = GCOLOR[g];
+    b.append(i, document.createTextNode(g + (conDatos.has(g) ? "" : " (sin datos)")));
+    b.onclick = () => {
+      // un clic aísla el grupo; si ya está aislado, vuelve a todos. Ctrl/Cmd+clic suma/quita.
+      if (ev_multi) { est.grupos.has(g) ? est.grupos.delete(g) : est.grupos.add(g); }
+      else if (est.grupos.size === 1 && est.grupos.has(g)) est.grupos = new Set(GRUPOS);
+      else est.grupos = new Set([g]);
+      if (!est.grupos.size) est.grupos = new Set(GRUPOS);
+      est.prod = ""; render();
+    };
+    fg.append(b);
+  });
+  let ev_multi = false;
+  fg.addEventListener("pointerdown", e => ev_multi = e.ctrlKey || e.metaKey || e.shiftKey, true);
+  fg.addEventListener("keydown", e => ev_multi = e.ctrlKey || e.metaKey || e.shiftKey, true);
+  document.getElementById("g-todos").onclick = () => { est.grupos = new Set(GRUPOS); est.prod = ""; render(); };
+  document.getElementById("f-prod").onchange = e => { est.prod = e.target.value; render(); };
+  document.getElementById("tema").onclick = () => {
+    const html = document.documentElement;
+    const oscuro = html.dataset.theme ? html.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    html.dataset.theme = oscuro ? "light" : "dark";
+    try { localStorage.setItem("rm-tema", html.dataset.theme); } catch(e) {}
+    render();
+  };
+  try { const t = localStorage.getItem("rm-tema"); if (t) document.documentElement.dataset.theme = t; } catch(e) {}
+}
+function mesesDisponibles() {
+  const ms = [...new Set(ORD.filter(x=>x.anio===est.anio).map(x=>x.mes))].sort((a,b)=>a-b);
+  const fd = document.getElementById("f-desde"), fh = document.getElementById("f-hasta");
+  fd.replaceChildren(); fh.replaceChildren();
+  ms.forEach(m => { fd.append(el("option",{value:m},MESES[m-1])); fh.append(el("option",{value:m},MESES[m-1])); });
+  est.desde = ms[0]; est.hasta = ms[ms.length-1];
+  fd.value = est.desde; fh.value = est.hasta;
+}
+function syncFiltros() {
+  document.querySelectorAll("#f-vista button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v===est.vista));
+  document.querySelectorAll("#f-orden button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v===est.orden));
+  document.querySelectorAll("#f-grupos .chip").forEach(b => b.setAttribute("aria-pressed", est.grupos.has(b.dataset.g)));
+  const fp = document.getElementById("f-prod");
+  const disponibles = agrupar(filtrar(VALIDAS,{sinProd:true}), x=>x.p.n);
+  const lista = [...disponibles.entries()].map(([n,l])=>({n, p:l[0].p, kp:agregar(l).kp})).sort((a,b)=>b.kp-a.kp);
+  fp.replaceChildren(el("option",{value:""},`Todos (${lista.length})`));
+  lista.forEach(x => fp.append(el("option",{value:x.n}, `${x.n}`)));
+  if (est.prod && !disponibles.has(est.prod)) fp.append(el("option",{value:est.prod},est.prod));
+  fp.value = est.prod;
+  const g = [...est.grupos];
+  document.getElementById("subtitulo").textContent =
+    `Rend. met. = kg producidos / kg consumidos · ${est.anio} · ${MESES[est.desde-1]}–${MESES[est.hasta-1]} · ` +
+    (g.length===GRUPOS.length ? "todos los grupos" : g.join(", ")) + (est.prod ? ` · ${est.prod}` : "") +
+    ` · datos: ${DATOS.fuente}` + (DATOS.maestro ? ` + ${DATOS.maestro}` : "") + ` (${DATOS.generado})`;
+}
+
+// ---------- KPIs ----------
+function renderKPIs() {
+  const v = filtrar(VALIDAS), a = agregar(v), exc = filtrar(EXCLUIDAS);
+  const box = document.getElementById("kpis"); box.replaceChildren();
+  const kpi = (lbl, val, sub, hero, cls) => {
+    const d = el("div",{class:"kpi"+(hero?" hero":"")});
+    d.append(el("div",{class:"lbl"},lbl), el("div",{class:"val"},val));
+    if (sub) d.append(el("div",{class:"sub "+(cls||"")},sub));
+    box.append(d);
+  };
+  const dif = a.r!=null && a.meta!=null ? a.r - a.meta : null;
+  kpi("Rendimiento metálico", pct(a.r),
+      dif==null ? "" : `${dif>=0?"▲ +":"▼ "}${nf2.format(dif)} pp vs meta`, true, dif==null?"":dif>=0?"delta-pos":"delta-neg");
+  kpi("Meta ponderada", pct(a.meta), "promedio de Rend_Met ponderado por kg consumidos");
+  kpi("Kg producidos", ton(a.kp), kg(a.kp));
+  kpi("Kg consumidos", ton(a.kc), kg(a.kc));
+  kpi("Pérdida metálica", ton(a.kc - a.kp), a.kc ? `${nf2.format(100 - a.r)} % del consumo` : "");
+  kpi("Órdenes válidas", nf0.format(a.cnt), `${nf0.format(exc.length)} excluidas por > 100 % (a corregir)`, false, exc.length ? "delta-neg" : "");
+}
+
+// ---------- carta de control ----------
+function puntosCarta() {
+  const v = filtrar(VALIDAS);
+  const clave = est.vista==="dia" ? x=>x.d : est.vista==="mes" ? x=>`${x.anio}-${String(x.mes).padStart(2,"0")}` : x=>String(x.anio);
+  const base = est.vista==="anio" ? VALIDAS.filter(x => (est.grupos.has(x.grupo)) && (!est.prod || x.p.n===est.prod)) : v;
+  const g = agrupar(base, clave);
+  return [...g.entries()].sort((a,b)=>a[0]<b[0]?-1:1).map(([k,l]) => ({ k, ...agregar(l), lista: l }));
+}
+function etiquetaPeriodo(k) {
+  if (est.vista==="dia") return fecha(k);
+  if (est.vista==="mes") { const [y,m]=k.split("-"); return `${MESES[+m-1]} ${y}`; }
+  return k;
+}
+function limites(pts) {
+  const tot = agregar(pts.flatMap(p=>p.lista));
+  const cl = tot.r;
+  if (pts.length < 2) return { cl, ucl: null, lcl: null, sigma: null, meta: tot.meta };
+  let mr = 0; for (let i=1;i<pts.length;i++) mr += Math.abs(pts[i].r - pts[i-1].r);
+  mr /= (pts.length-1);
+  const sigma = mr / 1.128; // carta I-MR (d2 = 1,128)
+  return { cl, ucl: cl + 3*sigma, lcl: cl - 3*sigma, sigma, mrBar: mr, meta: tot.meta };
+}
+function renderCarta() {
+  const cont = document.getElementById("cc"); cont.replaceChildren();
+  const pts = puntosCarta();
+  const L = limites(pts);
+  const nombres = {dia:"diaria", mes:"mensual", anio:"anual"};
+  document.getElementById("cc-titulo").textContent = `Carta de control ${nombres[est.vista]} (I-MR)`;
+  document.getElementById("cc-desc").textContent = est.vista==="anio"
+    ? "Un punto por año con los grupos y el producto seleccionados (ignora el rango de meses)."
+    : est.vista==="dia"
+      ? "Un punto por día: rendimiento ponderado de las órdenes que iniciaron ese día."
+      : "Un punto por mes: rendimiento ponderado de todas las órdenes del mes.";
+  if (!pts.length) { cont.append(el("div",{class:"vacio"},"Sin órdenes para los filtros seleccionados.")); renderTablaCarta(pts,L); return; }
+
+  const W = anchoDe(cont), H = 340, m = {t:18, r:64, b:34, l:48};
+  const vals = pts.map(p=>p.r).concat([L.ucl,L.lcl,L.meta,L.cl].filter(v=>v!=null));
+  let y0 = Math.min(...vals), y1 = Math.max(...vals);
+  const pad = Math.max(0.5,(y1-y0)*0.08); y0 -= pad; y1 = Math.min(Math.max(y1+pad, y0+1), 100.5);
+  const x = pts.length===1 ? (()=>{const f=()=> (m.l+W-m.r)/2; return f;})() : escala(0, pts.length-1, m.l+10, W-m.r-10);
+  const y = escala(y0, y1, H-m.b, m.t);
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Carta de control del rendimiento metálico"});
+
+  for (const t of ticks(y0,y1,6)) {
+    svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y(t),y2:y(t),stroke:"var(--grid)","stroke-width":1}));
+    svg.append(s("text",{x:m.l-8,y:y(t)+4,"text-anchor":"end"},nf1.format(t)+"%"));
+  }
+  svg.append(s("line",{x1:m.l,x2:W-m.r,y1:H-m.b,y2:H-m.b,stroke:"var(--axis)"}));
+  // etiquetas X (espaciadas)
+  const cada = Math.max(1, Math.ceil(pts.length / Math.floor((W-m.l-m.r)/64)));
+  pts.forEach((p,i) => { if (i % cada === 0 || i===pts.length-1 && pts.length<30)
+    svg.append(s("text",{x:x(i),y:H-m.b+17,"text-anchor":"middle"}, est.vista==="dia" ? fecha(p.k).replace(/ \d{4}$/,"") : etiquetaPeriodo(p.k))); });
+
+  const ref = (v, color, lbl, dash) => { if (v==null) return;
+    svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),stroke:color,"stroke-width":1.5,"stroke-dasharray":dash||null}));
+    const t = s("text",{x:W-m.r+6,y:y(v)+4},`${lbl} ${nf2.format(v)}`); t.style.fill="var(--text-secondary)"; svg.append(t);
+  };
+  // separar etiquetas de referencia si chocan
+  const refs = [[L.ucl,"var(--limite)","LCS"],[L.cl,"var(--centro)","LC"],[L.lcl,"var(--limite)","LCI"],[L.meta,"var(--meta)","Meta","5 4"]].filter(r=>r[0]!=null);
+  refs.forEach(r => ref(...r));
+  // evitar solapamiento de textos de referencia
+  const txts = [...svg.querySelectorAll("text")].filter(t=>t.getAttribute("x")==String(W-m.r+6)).sort((a,b)=>a.getAttribute("y")-b.getAttribute("y"));
+  for (let i=1;i<txts.length;i++){ const py=+txts[i-1].getAttribute("y"), cy=+txts[i].getAttribute("y"); if (cy-py<12) txts[i].setAttribute("y", py+12); }
+
+  if (pts.length>1) {
+    const d = pts.map((p,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(p.r).toFixed(1)}`).join("");
+    svg.append(s("path",{d,fill:"none",stroke:"var(--serie-proceso)","stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"}));
+  }
+  const fuera = [];
+  const rad = pts.length > 120 ? 3 : 4.5;
+  pts.forEach((p,i) => {
+    const out = (L.ucl!=null && p.r > L.ucl) || (L.lcl!=null && p.r < L.lcl);
+    if (out) fuera.push(p);
+    svg.append(s("circle",{cx:x(i),cy:y(p.r),r: out? rad+1.5 : rad, fill: out?"var(--critical)":"var(--serie-proceso)", stroke:"var(--surface-1)","stroke-width":2}));
+    if (out) { const t = s("text",{x:x(i),y: p.r > L.ucl ? y(p.r)-10 : y(p.r)+18,"text-anchor":"middle"}, p.r > L.ucl ? "▲" : "▼"); t.style.fill="var(--critical)"; svg.append(t); }
+  });
+  // crosshair
+  const cross = s("line",{y1:m.t,y2:H-m.b,stroke:"var(--axis)","stroke-width":1,visibility:"hidden"});
+  svg.append(cross);
+  const hit = s("rect",{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b,fill:"transparent",tabindex:0});
+  const alMover = ev => {
+    const bb = svg.getBoundingClientRect();
+    const px = ev.clientX - bb.left;
+    let i = pts.length===1 ? 0 : Math.round(escala(0,pts.length-1,m.l+10,W-m.r-10).inv(px));
+    i = Math.max(0, Math.min(pts.length-1, i));
+    const p = pts[i];
+    cross.setAttribute("x1",x(i)); cross.setAttribute("x2",x(i)); cross.setAttribute("visibility","visible");
+    const out = (L.ucl!=null && p.r > L.ucl) || (L.lcl!=null && p.r < L.lcl);
+    mostrarTip(ev, etiquetaPeriodo(p.k) + (out ? " · fuera de control" : ""), [
+      ["Rend. met.", pct(p.r), "var(--serie-proceso)"],
+      ["Meta", pct(p.meta), "var(--meta)"],
+      ["Kg producidos", kg(p.kp)],
+      ["Kg consumidos", kg(p.kc)],
+      ["Órdenes", nf0.format(p.cnt)],
+    ]);
+  };
+  hit.addEventListener("pointermove", alMover);
+  hit.addEventListener("pointerleave", () => { cross.setAttribute("visibility","hidden"); ocultarTip(); });
+  svg.append(hit);
+  cont.append(svg);
+
+  const nota = document.getElementById("cc-nota");
+  nota.textContent = L.sigma==null ? "Se necesitan al menos 2 puntos para calcular límites de control." :
+    `LC = ${pct(L.cl)} · σ estimada = MR̄/1,128 = ${nf2.format(L.sigma)} pp · LCS = ${pct(L.ucl)} · LCI = ${pct(L.lcl)} · ` +
+    (fuera.length ? `${fuera.length} punto(s) fuera de control: ${fuera.map(p=>etiquetaPeriodo(p.k)+" ("+pct(p.r)+")").join(", ")}.` : "Todos los puntos dentro de control.");
+  renderTablaCarta(pts, L);
+}
+function renderTablaCarta(pts, L) {
+  const cont = document.getElementById("cc-tabla"); cont.replaceChildren();
+  const t = el("table"), th = el("thead"), tr = el("tr");
+  ["Período","Órdenes","Kg producidos","Kg consumidos","Rend. met.","Meta","Estado"].forEach((h,i)=>tr.append(el("th",{class:i?"n":""},h)));
+  th.append(tr); t.append(th);
+  const tb = el("tbody");
+  pts.forEach(p => {
+    const out = (L.ucl!=null && p.r > L.ucl) ? "▲ sobre LCS" : (L.lcl!=null && p.r < L.lcl) ? "▼ bajo LCI" : "En control";
+    const r = el("tr");
+    [etiquetaPeriodo(p.k), nf0.format(p.cnt), nf0.format(p.kp), nf0.format(p.kc), pct(p.r), pct(p.meta), out]
+      .forEach((v,i)=>r.append(el("td",{class:(i?"n":"")+(i===6&&out!=="En control"?" alerta":"")},v)));
+    tb.append(r);
+  });
+  t.append(tb); cont.append(t);
+}
+
+// ---------- small multiples por grupo ----------
+function renderMultiples() {
+  const cont = document.getElementById("multiples"); cont.replaceChildren();
+  const v = filtrar(VALIDAS);
+  const meses = []; for (let mm=est.desde; mm<=est.hasta; mm++) meses.push(mm);
+  const total = agrupar(v, x=>x.mes);
+  const porG = agrupar(v, x=>x.grupo);
+  const gs = GRUPOS.filter(g => est.grupos.has(g) && porG.has(g));
+  if (!gs.length) { cont.append(el("div",{class:"vacio"},"Sin datos.")); return; }
+  const series = gs.map(g => { const pm = agrupar(porG.get(g), x=>x.mes); return { g, pts: meses.map(mm => pm.has(mm) ? {mm, ...agregar(pm.get(mm))} : null) }; });
+  const tot = meses.map(mm => total.has(mm) ? {mm, ...agregar(total.get(mm))} : null);
+  const todos = series.flatMap(s=>s.pts).concat(tot).filter(Boolean).map(p=>p.r);
+  let y0 = Math.floor(Math.min(...todos)), y1 = Math.min(100, Math.ceil(Math.max(...todos)));
+  if (y1-y0<2) { y0-=1; y1+=1; }
+  series.forEach(sr => {
+    const card = el("div");
+    const a = agregar(porG.get(sr.g));
+    const head = el("div",{style:"display:flex;justify-content:space-between;align-items:baseline;gap:8px"});
+    const nm = el("div",{style:"font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px"});
+    const k = el("i",{class:"k-line"}); k.style.borderColor = GCOLOR[sr.g]; nm.append(k, document.createTextNode(sr.g));
+    head.append(nm, el("div",{style:"font-size:13px;font-weight:600"}, pct(a.r)));
+    card.append(head);
+    const W = 260, H = 130, m = {t:10,r:10,b:22,l:36};
+    const x = escala(0, Math.max(1,meses.length-1), m.l+4, W-m.r-4), y = escala(y0,y1,H-m.b,m.t);
+    const svg = s("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",role:"img","aria-label":`Rendimiento mensual ${sr.g}`});
+    ticks(y0,y1,3).forEach(t => { svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y(t),y2:y(t),stroke:"var(--grid)"})); svg.append(s("text",{x:m.l-5,y:y(t)+4,"text-anchor":"end"},nf0.format(t)+"%")); });
+    meses.forEach((mm,i) => { if (meses.length<=6 || i%2===0) svg.append(s("text",{x:x(i),y:H-6,"text-anchor":"middle"},MESES[mm-1])); });
+    const linea = (arr, color, w) => {
+      let d="", pen=false;
+      arr.forEach((p,i)=>{ if(!p){pen=false;return;} d += `${pen?"L":"M"}${x(i).toFixed(1)},${y(p.r).toFixed(1)}`; pen=true; });
+      svg.append(s("path",{d,fill:"none",stroke:color,"stroke-width":w,"stroke-linejoin":"round","stroke-linecap":"round"}));
+    };
+    linea(tot, "var(--axis)", 1.5);
+    linea(sr.pts, GCOLOR[sr.g], 2);
+    sr.pts.forEach((p,i)=>{ if(p) svg.append(s("circle",{cx:x(i),cy:y(p.r),r:3.5,fill:GCOLOR[sr.g],stroke:"var(--surface-1)","stroke-width":2})); });
+    const cross = s("line",{y1:m.t,y2:H-m.b,stroke:"var(--axis)",visibility:"hidden"}); svg.append(cross);
+    const hit = s("rect",{x:m.l,y:0,width:W-m.l-m.r,height:H,fill:"transparent"});
+    hit.addEventListener("pointermove", ev => {
+      const bb = svg.getBoundingClientRect(), px = (ev.clientX-bb.left)*W/bb.width;
+      const i = Math.max(0,Math.min(meses.length-1,Math.round(x.inv(px))));
+      cross.setAttribute("x1",x(i)); cross.setAttribute("x2",x(i)); cross.setAttribute("visibility","visible");
+      const p = sr.pts[i], t = tot[i];
+      mostrarTip(ev, `${sr.g} · ${MESES[meses[i]-1]} ${est.anio}`, [
+        [sr.g, p?pct(p.r):"sin producción", GCOLOR[sr.g]],
+        ["Total seleccionado", t?pct(t.r):"—", "var(--axis)"],
+        ["Meta", p?pct(p.meta):"—"],
+        ["Kg producidos", p?kg(p.kp):"—"],
+        ["Órdenes", p?nf0.format(p.cnt):"0"],
+      ]);
+    });
+    hit.addEventListener("pointerleave", ()=>{cross.setAttribute("visibility","hidden"); ocultarTip();});
+    svg.append(hit);
+    card.append(svg);
+    cont.append(card);
+  });
+}
+
+// ---------- volumen apilado ----------
+function renderVolumen() {
+  const cont = document.getElementById("vol"); cont.replaceChildren();
+  const ley = document.getElementById("vol-ley"); ley.replaceChildren();
+  const v = filtrar(VALIDAS);
+  const meses = []; for (let mm=est.desde; mm<=est.hasta; mm++) meses.push(mm);
+  const gs = GRUPOS.filter(g => v.some(x=>x.grupo===g));
+  gs.forEach(g => { const sp = el("span"); const k = el("i",{class:"k-rect"}); k.style.background=GCOLOR[g]; sp.append(k, document.createTextNode(g)); ley.append(sp); });
+  if (!v.length) { cont.append(el("div",{class:"vacio"},"Sin datos.")); return; }
+  const pm = agrupar(v, x=>x.mes);
+  const datos = meses.map(mm => { const l = pm.get(mm)||[]; const pg = agrupar(l,x=>x.grupo); return { mm, tot: agregar(l).kp, seg: gs.map(g=>({g, kp: pg.has(g)?agregar(pg.get(g)).kp:0})) }; });
+  const W = anchoDe(cont,560), H = 260, m = {t:16,r:8,b:26,l:52};
+  const max = Math.max(...datos.map(d=>d.tot)) || 1;
+  const y = escala(0, max*1.08, H-m.b, m.t);
+  const banda = (W-m.l-m.r)/meses.length, bw = Math.min(28, banda*0.6);
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Kg producidos por mes"});
+  ticks(0,max*1.08,4).forEach(t=>{ svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y(t),y2:y(t),stroke:"var(--grid)"})); svg.append(s("text",{x:m.l-6,y:y(t)+4,"text-anchor":"end"}, t>=1e6? nf1.format(t/1e6)+"M" : nf0.format(t/1e3)+"k")); });
+  datos.forEach((d,i) => {
+    const cx = m.l + banda*(i+0.5);
+    let acc = 0;
+    const visibles = d.seg.filter(sg=>sg.kp>0);
+    visibles.forEach((sg,j) => {
+      const yTop = y(acc+sg.kp), yBot = y(acc);
+      const h = Math.max(0, yBot - yTop - (j>0?2:0));
+      const top = j===visibles.length-1;
+      const x0 = cx-bw/2, r = top ? Math.min(4,h) : 0;
+      const path = top
+        ? `M${x0},${yBot - (j>0?2:0)}V${yTop+r}Q${x0},${yTop} ${x0+r},${yTop}H${x0+bw-r}Q${x0+bw},${yTop} ${x0+bw},${yTop+r}V${yBot-(j>0?2:0)}Z`
+        : `M${x0},${yBot-(j>0?2:0)}V${yTop}H${x0+bw}V${yBot-(j>0?2:0)}Z`;
+      if (h>0) svg.append(s("path",{d:path,fill:GCOLOR[sg.g]}));
+      acc += sg.kp;
+    });
+    if (d.tot) { const t = s("text",{x:cx,y:y(d.tot)-5,"text-anchor":"middle"}, nf0.format(d.tot/1e3)+" t"); svg.append(t); }
+    svg.append(s("text",{x:cx,y:H-8,"text-anchor":"middle"},MESES[d.mm-1]));
+    const hit = s("rect",{x:cx-banda/2,y:m.t,width:banda,height:H-m.t-m.b,fill:"transparent"});
+    hit.addEventListener("pointermove", ev => mostrarTip(ev, `${MESES[d.mm-1]} ${est.anio} · ${kg(d.tot)}`,
+      d.seg.filter(sg=>sg.kp).sort((a,b)=>b.kp-a.kp).map(sg=>[sg.g, kg(sg.kp), GCOLOR[sg.g]])));
+    hit.addEventListener("pointerleave", ocultarTip);
+    svg.append(hit);
+  });
+  svg.append(s("line",{x1:m.l,x2:W-m.r,y1:H-m.b,y2:H-m.b,stroke:"var(--axis)"}));
+  cont.append(svg);
+}
+
+// ---------- resumen por grupo ----------
+function renderGrupos() {
+  const cont = document.getElementById("grupos"); cont.replaceChildren();
+  const v = filtrar(VALIDAS, {sinProd:true});
+  const pg = agrupar(v, x=>x.grupo);
+  const exc = agrupar(filtrar(EXCLUIDAS,{sinProd:true}), x=>x.grupo);
+  const filas = GRUPOS.filter(g=>est.grupos.has(g)).map(g => ({ g, ...(pg.has(g)?agregar(pg.get(g)):{kp:0,kc:0,cnt:0,r:null,meta:null}), ex:(exc.get(g)||[]).length }))
+    .sort((a,b)=>b.kp-a.kp);
+  const t = el("table"), tr = el("tr");
+  ["Grupo","Kg producidos","Órdenes","Rend. met.","Meta","vs meta","Excl."].forEach((h,i)=>tr.append(el("th",{class:i?"n":""},h)));
+  const th = el("thead"); th.append(tr); t.append(th);
+  const tb = el("tbody");
+  filas.forEach(f => {
+    const r = el("tr"); const c0 = el("td"); const k = el("i",{class:"k-dot",style:"margin-right:6px"}); k.style.background=GCOLOR[f.g];
+    c0.append(k, document.createTextNode(f.g)); r.append(c0);
+    const dif = f.r!=null&&f.meta!=null ? f.r-f.meta : null;
+    [nf0.format(f.kp), nf0.format(f.cnt), pct(f.r), pct(f.meta), dif==null?"—":(dif>=0?"▲ +":"▼ ")+nf2.format(dif)+" pp", f.ex||"—"]
+      .forEach((val,i)=>r.append(el("td",{class:"n"+(i===4&&dif!=null?(dif>=0?" delta-pos":" delta-neg"):"")},val)));
+    tb.append(r);
+  });
+  t.append(tb);
+  const w = el("div",{class:"tabla-wrap"}); w.append(t); cont.append(w);
+  cont.append(el("p",{class:"nota"},"Estrella no registra órdenes en el período. Barra traspaso de carga se agrupa en Redondo liso; los productos SEMI se unifican con su equivalente."));
+}
+
+// ---------- ranking ----------
+function renderRanking() {
+  const cont = document.getElementById("ranking"); cont.replaceChildren();
+  const v = filtrar(VALIDAS, {sinProd:true});
+  const pp = agrupar(v, x=>x.p.n);
+  let filas = [...pp.entries()].map(([n,l]) => ({ n, p:l[0].p, ...agregar(l) }));
+  filas.sort(est.orden==="kg" ? (a,b)=>b.kp-a.kp : (a,b)=>b.r-a.r);
+  if (!filas.length) { cont.append(el("div",{class:"vacio"},"Sin datos.")); return; }
+  const W = anchoDe(cont), rowH = 26, top = 34;
+  const colNom = Math.min(360, W*0.40), colKg = Math.min(200, W*0.2), gap = 16;
+  const xKg0 = colNom + 8, xR0 = xKg0 + colKg + gap + 44, xR1 = W - 50;
+  const maxKg = Math.max(...filas.map(f=>f.kp));
+  const rs = filas.map(f=>f.r).concat(filas.map(f=>f.meta).filter(Boolean));
+  const r0 = Math.max(0, Math.floor(Math.min(...rs)-0.5)), r1 = Math.min(100, Math.ceil(Math.max(...rs)+0.5));
+  const xr = escala(r0, r1, xR0, xR1), xk = escala(0, maxKg, xKg0, xKg0+colKg);
+  const H = top + filas.length*rowH + 4;
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Ranking de productos"});
+  const hdr = (x, txt, anchor) => { const t = s("text",{x, y:12, "text-anchor":anchor||"start"}, txt); t.style.fontWeight="600"; t.style.fill="var(--text-secondary)"; svg.append(t); };
+  hdr(0,"Producto"); hdr(xKg0,"Kg producidos"); hdr(xR0,"Rend. met. (%)");
+  ticks(r0,r1,4).forEach(t => { svg.append(s("line",{x1:xr(t),x2:xr(t),y1:top-4,y2:H,stroke:"var(--grid)"})); svg.append(s("text",{x:xr(t),y:top-8,"text-anchor":"middle"},nf0.format(t))); });
+  filas.forEach((f,i) => {
+    const yc = top + i*rowH + rowH/2;
+    const g = s("g",{class:"rank-row",tabindex:0});
+    g.append(s("rect",{class:"hit",x:0,y:yc-rowH/2,width:W,height:rowH,fill: f.n===est.prod ? "var(--aza-rojo-suave)" : "transparent"}));
+    const nombre = `${i+1}. ${f.p.grupo} ${f.p.desc}`;
+    const t = s("text",{x:0,y:yc+4}, nombre); t.style.fill="var(--text-primary)"; t.style.fontSize="12px";
+    const calidad = f.n.replace(/^.*?(A\d|SAE|ASTM|COM|A 36|A36)/,"$1");
+    const t2 = s("tspan",{dx:6}, calidad.length<40?calidad:""); t2.style.fill="var(--text-muted)"; t.append(t2);
+    g.append(t);
+    // recorte simple si no cabe
+    g.append(s("rect",{x:xKg0,y:yc-5,width:Math.max(1,xk(f.kp)-xKg0),height:10,rx:2,fill:"var(--text-muted)",opacity:.55}));
+    g.append(s("text",{x:xk(f.kp)+4,y:yc+4}, nf0.format(f.kp/1e3)+" t"));
+    if (f.meta) g.append(s("line",{x1:xr(f.meta),x2:xr(f.meta),y1:yc-7,y2:yc+7,stroke:"var(--meta)","stroke-width":2}));
+    g.append(s("circle",{cx:xr(f.r),cy:yc,r:5,fill:GCOLOR[f.p.grupo],stroke:"var(--surface-1)","stroke-width":2}));
+    const tv = s("text",{x:W-4,y:yc+4,"text-anchor":"end"}, nf2.format(f.r)); tv.style.fill="var(--text-primary)"; g.append(tv);
+    g.addEventListener("pointermove", ev => mostrarTip(ev, f.n, [
+      ["Grupo", f.p.grupo, GCOLOR[f.p.grupo]],
+      ["Medidas", f.p.desc + (f.p.pulgadas ? ` (${f.p.pulgadas})` : "")],
+      ["Formato (maestro)", f.p.formato || "no está en el maestro"],
+      ["Rend. met.", pct(f.r)], ["Meta", pct(f.meta)],
+      ["Kg producidos", kg(f.kp)], ["Kg consumidos", kg(f.kc)], ["Órdenes", nf0.format(f.cnt)],
+    ]));
+    g.addEventListener("pointerleave", ocultarTip);
+    const elegir = () => { est.prod = est.prod===f.n ? "" : f.n; render(); };
+    g.addEventListener("click", elegir);
+    g.addEventListener("keydown", e => { if (e.key==="Enter"||e.key===" ") { e.preventDefault(); elegir(); } });
+    svg.append(g);
+  });
+  cont.append(svg);
+  // recortar nombres que invaden la columna de kg
+  svg.querySelectorAll("g.rank-row > text:first-of-type").forEach(t => {
+    const tsp = t.querySelector("tspan");
+    if (t.getComputedTextLength() > colNom) { if (tsp) tsp.textContent = ""; }
+    let txt = t.firstChild.textContent;
+    while (t.getComputedTextLength() > colNom && txt.length > 8) { txt = txt.slice(0,-2); t.firstChild.textContent = txt + "…"; }
+  });
+}
+
+// ---------- mapa de calor ----------
+function mezcla(c1, c2, t) {
+  const h = c => [1,3,5].map(i=>parseInt(c.slice(i,i+2),16));
+  const a = h(c1), b = h(c2);
+  return "#"+a.map((v,i)=>Math.round(v+(b[i]-v)*t).toString(16).padStart(2,"0")).join("");
+}
+function renderHeat() {
+  const cont = document.getElementById("heat"); cont.replaceChildren();
+  const ley = document.getElementById("heat-ley"); ley.replaceChildren();
+  const cs = getComputedStyle(document.documentElement);
+  const cNeg = cs.getPropertyValue("--div-neg").trim(), cMid = cs.getPropertyValue("--div-mid").trim(), cPos = cs.getPropertyValue("--div-pos").trim();
+  const LIM = 4;
+  const color = d => d>=0 ? mezcla(cMid,cPos,Math.min(1,d/LIM)) : mezcla(cMid,cNeg,Math.min(1,-d/LIM));
+  [-4,-2,-1,0,1,2,4].forEach(d => { const sp = el("span"); const k = el("i",{class:"k-rect"}); k.style.background=color(d); sp.append(k, document.createTextNode((d>0?"+":"")+d+(Math.abs(d)===4?"+":"")+" pp")); ley.append(sp); });
+  const v = filtrar(VALIDAS, {sinProd:true});
+  const pp = agrupar(v, x=>x.p.n);
+  const filas = [...pp.entries()].map(([n,l])=>({n,p:l[0].p,l,...agregar(l)})).sort(est.orden==="kg"?(a,b)=>b.kp-a.kp:(a,b)=>b.r-a.r).slice(0,30);
+  if (!filas.length) { cont.append(el("div",{class:"vacio"},"Sin datos.")); return; }
+  const meses = []; for (let mm=est.desde; mm<=est.hasta; mm++) meses.push(mm);
+  const W0 = anchoDe(cont), colNom = Math.min(300, W0*0.38);
+  const cw = Math.max(34, Math.min(70, (W0-colNom-10)/meses.length)), ch = 22;
+  const W = colNom + cw*meses.length + 4, H = 20 + filas.length*ch;
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Mapa de calor producto por mes"});
+  meses.forEach((mm,j)=>svg.append(s("text",{x:colNom+cw*j+cw/2,y:12,"text-anchor":"middle"},MESES[mm-1])));
+  filas.forEach((f,i) => {
+    const yy = 20 + i*ch;
+    const t = s("text",{x:0,y:yy+ch/2+4}, `${f.p.grupo} ${f.p.desc}`); t.style.fill="var(--text-primary)"; t.style.fontSize="12px"; svg.append(t);
+    const pm = agrupar(f.l, x=>x.mes);
+    meses.forEach((mm,j) => {
+      const x0 = colNom + cw*j;
+      if (!pm.has(mm)) { svg.append(s("rect",{x:x0+1,y:yy+1,width:cw-2,height:ch-2,rx:3,fill:"none",stroke:"var(--grid)"})); return; }
+      const a = agregar(pm.get(mm)); const d = a.meta!=null ? a.r - a.meta : 0;
+      const fill = color(d);
+      const rc = s("rect",{x:x0+1,y:yy+1,width:cw-2,height:ch-2,rx:3,fill});
+      svg.append(rc);
+      if (cw >= 44) {
+        const lum = (()=>{ const c=[1,3,5].map(k=>parseInt(fill.slice(k,k+2),16)/255); return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; })();
+        const tx = s("text",{x:x0+cw/2,y:yy+ch/2+4,"text-anchor":"middle"}, nf1.format(a.r)); tx.style.fill = lum>0.45?"#0b0b0b":"#ffffff"; tx.style.fontSize="10.5px"; tx.style.pointerEvents="none"; svg.append(tx);
+      }
+      rc.addEventListener("pointermove", ev => mostrarTip(ev, `${f.n} · ${MESES[mm-1]}`, [
+        ["Rend. met.", pct(a.r)], ["Meta", pct(a.meta)], ["vs meta", (d>=0?"+":"")+nf2.format(d)+" pp"], ["Kg producidos", kg(a.kp)], ["Órdenes", nf0.format(a.cnt)] ]));
+      rc.addEventListener("pointerleave", ocultarTip);
+    });
+  });
+  cont.append(svg);
+  svg.querySelectorAll(":scope > text").forEach(t => { if (+t.getAttribute("x")!==0) return; let txt=t.textContent; while (t.getComputedTextLength()>colNom-8 && txt.length>8){ txt=txt.slice(0,-2); t.textContent=txt+"…"; } });
+}
+
+// ---------- órdenes a corregir ----------
+function renderCorregir() {
+  const cont = document.getElementById("corregir"); cont.replaceChildren();
+  const exc = filtrar(EXCLUIDAS).sort((a,b)=>b.r-a.r);
+  if (!exc.length) { cont.append(el("div",{class:"vacio"},"No hay órdenes sobre 100 % con estos filtros.")); return; }
+  const t = el("table"), tr = el("tr");
+  ["Orden","Fecha inicio","Grupo","Producto","Kg producidos","Kg consumidos","Diferencia (kg)","Rend. met."].forEach((h,i)=>tr.append(el("th",{class:i>=4?"n":""},h)));
+  const th = el("thead"); th.append(tr); t.append(th);
+  const tb = el("tbody");
+  exc.forEach(x => {
+    const r = el("tr");
+    [x.o, fecha(x.d), x.grupo, x.p.n, nf0.format(x.kp), nf0.format(x.kc), nf0.format(x.kp-x.kc), pct(x.r)]
+      .forEach((v,i)=>r.append(el("td",{class:(i>=4?"n":"")+(i===7?" alerta":"")},v)));
+    tb.append(r);
+  });
+  t.append(tb); cont.append(t);
+}
+
+// ---------- render ----------
+function render() {
+  syncFiltros();
+  renderKPIs(); renderCarta(); renderMultiples(); renderVolumen(); renderGrupos(); renderRanking(); renderHeat(); renderCorregir();
+}
+initFiltros();
+render();
+let rT; addEventListener("resize", () => { clearTimeout(rT); rT = setTimeout(render, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", render);
+</script>
+</body>
+</html>
