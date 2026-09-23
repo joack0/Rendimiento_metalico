@@ -13,6 +13,7 @@ from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.chart import LineChart, Reference
+from openpyxl.chart.label import DataLabelList
 from openpyxl.comments import Comment
 from openpyxl.formatting.rule import CellIsRule, ColorScaleRule, FormulaRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -76,6 +77,17 @@ def fuente_arial(ws):
                               color=c.font.color)
 
 
+def semana_iso(fecha):
+    """Semana ISO 8601 (lunes a domingo): [año ISO, número de semana, etiqueta]."""
+    y, w, _ = fecha.isocalendar()
+    return [y, w, f"{y}-S{w:02d}"]
+
+
+def etiqueta_semana(y, w):
+    lunes = datetime.fromisocalendar(y, w, 1)
+    return f"S{w:02d} {y} ({lunes.day} {MESES[lunes.month - 1].lower()})"
+
+
 def main():
     ruta = Path(sys.argv[1]) if len(sys.argv) > 1 else CSV_DEFAULT
     ruta_maestro = Path(sys.argv[2]) if len(sys.argv) > 2 else MAESTRO_DEFAULT
@@ -90,7 +102,7 @@ def main():
     cols = ["Orden", "Fecha inicio", "Fecha", "Año", "Mes", "Grupo", "Producto", "Material original (CSV)",
             "Formato (maestro)", "Código (maestro)", "Diámetro (mm)", "Ancho (mm)", "Espesor (mm)", "Lado (mm)",
             "Largo (m)", "Kg producidos", "Kg consumidos", "Rend. met.", "Meta (Rend_Met)", "Estado",
-            "Pérdida (kg)", "Meta × Kg cons"]
+            "Pérdida (kg)", "Meta × Kg cons", "Año ISO", "Semana ISO", "Semana"]
     encabezado(wo, 1, cols)
     n = len(ordenes)
     for i, o in enumerate(ordenes, 2):
@@ -101,7 +113,8 @@ def main():
                 p["diametro"], p["ancho"], p["espesor"], p["lado"], p["largo"],
                 o["kp"], o["kc"], f"=IFERROR(P{i}/Q{i},\"\")",
                 (o["meta"] / 100) if o["meta"] else None,
-                f"=IF(R{i}>1,\"A corregir\",\"Válida\")", f"=Q{i}-P{i}", f"=IF(S{i}=\"\",0,S{i}*Q{i})"]
+                f"=IF(R{i}>1,\"A corregir\",\"Válida\")", f"=Q{i}-P{i}", f"=IF(S{i}=\"\",0,S{i}*Q{i})",
+                *semana_iso(o["ini"])]
         for j, v in enumerate(fila, 1):
             c = wo.cell(i, j, v)
             c.font = f_base
@@ -118,14 +131,14 @@ def main():
     tab.tableStyleInfo = TableStyleInfo(name="TableStyleLight1", showRowStripes=True)
     wo.add_table(tab)
     wo.freeze_panes = "B2"
-    anchos(wo, [11, 16, 11, 7, 6, 13, 44, 44, 14, 12, 10, 10, 10, 9, 9, 13, 13, 10, 10, 11, 11, 14])
+    anchos(wo, [11, 16, 11, 7, 6, 13, 44, 44, 14, 12, 10, 10, 10, 9, 9, 13, 13, 10, 10, 11, 11, 14, 9, 9, 11])
     wo.conditional_formatting.add(f"T2:T{ult}", CellIsRule(operator="equal", formula=['"A corregir"'], fill=fill_alerta))
     wo.conditional_formatting.add(f"R2:R{ult}", CellIsRule(operator="greaterThan", formula=["1"], fill=fill_alerta))
 
     # rangos absolutos usados en todas las fórmulas
     R = {k: f"Ordenes!${c}$2:${c}${ult}" for k, c in
          {"fecha": "C", "anio": "D", "mes": "E", "grupo": "F", "prod": "G", "kp": "P", "kc": "Q",
-          "estado": "T", "metakc": "V"}.items()}
+          "estado": "T", "metakc": "V", "anioiso": "W", "sem": "X"}.items()}
 
     # ------------------------------------------------ hojas de carta de control
     def hoja_carta(nombre, titulo_txt, periodos, tipo):
@@ -164,7 +177,7 @@ def main():
             c.number_format, c.font = fmt, f_bold
         ws.cell(7, 8, "d2 = 1,128 es la constante de la carta I-MR para rangos móviles de 2 puntos.").font = f_nota
 
-        cab = ["Período", "Año", "Mes", "Órdenes válidas", "Kg producidos", "Kg consumidos", "Rend. met.",
+        cab = ["Período", "Año ISO" if tipo == "sem" else "Año", "Semana" if tipo == "sem" else "Mes", "Órdenes válidas", "Kg producidos", "Kg consumidos", "Rend. met.",
                "Meta", "vs meta (pp)", "MR", "LC", "LCS", "LCI", "Estado", "Órdenes a corregir"]
         encabezado(ws, f0 - 1, cab)
         for i, per in enumerate(periodos):
@@ -175,6 +188,12 @@ def main():
                 ws.cell(r, 2, anio)
                 ws.cell(r, 3, mes)
                 cond = f'{R["anio"]},$B{r},{R["mes"]},$C{r}'
+            elif tipo == "sem":
+                anio, sem = per
+                ws.cell(r, 1, etiqueta_semana(anio, sem))
+                ws.cell(r, 2, anio)
+                ws.cell(r, 3, sem)
+                cond = f'{R["anioiso"]},$B{r},{R["sem"]},$C{r}'
             else:
                 ws.cell(r, 1, per).number_format = "dd-mm-yyyy"
                 ws.cell(r, 2, f"=YEAR(A{r})")
@@ -206,12 +225,13 @@ def main():
         ws.conditional_formatting.add(f"I{a}:I{b}", CellIsRule(operator="lessThan", formula=["0"],
                                                                font=Font(name=F, color="D03B3B")))
         ws.freeze_panes = ws.cell(f0, 2)
-        anchos(ws, [13, 7, 6, 10, 14, 14, 11, 10, 11, 9, 9, 9, 9, 14, 11])
+        anchos(ws, [20 if tipo == "sem" else 13, 7, 7, 10, 14, 14, 11, 10, 11, 9, 9, 9, 9, 14, 11])
         ws.column_dimensions["F"].width = 26
 
         ch = LineChart()
         ch.title = titulo_txt
-        ch.height, ch.width = 9, 26
+        # ancho proporcional a la cantidad de puntos para que se lea el % de cada uno
+        ch.height, ch.width = 10, max(26, len(periodos) * (1.1 if tipo == "dia" else 1.4))
         ch.y_axis.title = "Rend. met."
         ch.y_axis.number_format = "0.0%"
         ch.y_axis.majorGridlines = None
@@ -227,6 +247,11 @@ def main():
             s.smooth = False
         ch.series[0].marker.symbol = "circle"
         ch.series[0].marker.size = 5
+        ch.series[0].dLbls = DataLabelList()
+        ch.series[0].dLbls.showVal = True
+        ch.series[0].dLbls.showSerName = ch.series[0].dLbls.showCatName = ch.series[0].dLbls.showLegendKey = False
+        ch.series[0].dLbls.numFmt = "0.0%"
+        ch.series[0].dLbls.position = "t"
         ch.set_categories(Reference(ws, min_col=1, min_row=f0, max_row=b))
         ws.add_chart(ch, "Q4")
         return ws
@@ -234,6 +259,8 @@ def main():
     meses = sorted({(o["ini"].year, o["ini"].month) for o in ordenes})
     dias = sorted({o["ini"].date() for o in ordenes})
     hoja_carta("Carta mensual", "Carta de control mensual", meses, "mes")
+    semanas = sorted({tuple(semana_iso(o["ini"])[:2]) for o in ordenes})
+    hoja_carta("Carta semanal", "Carta de control semanal", semanas, "sem")
     hoja_carta("Carta diaria", "Carta de control diaria", dias, "dia")
 
     # ------------------------------------------------------ Grupo x mes
@@ -282,6 +309,45 @@ def main():
     wg.cell(r1 + 1, 1, "Escala de color: rojo ≤ 90 %, gris 94,5 %, azul ≥ 97 %.").font = f_nota
     anchos(wg, [16] + [11] * (len(meses) + 1))
     wg.freeze_panes = "B6"
+
+    # ------------------------------------------------------ Grupo x semana
+    wsg = wb.create_sheet("Grupo x semana")
+    titulo(wsg, "Rendimiento metálico por grupo y semana ISO",
+           "Semana ISO: lunes a domingo, según la fecha de inicio de la orden. Órdenes válidas. "
+           "Rend. = Σ kg producidos / Σ kg consumidos.")
+    gcols = GRUPOS + ["Total"]
+    encabezado(wsg, 4, ["Semana", "Año ISO", "N° semana"] + [f"Rend. {g}" for g in gcols]
+               + ["Meta total", "vs meta (pp)", "Kg producidos", "Kg consumidos", "Órdenes válidas"])
+    nc = 3 + len(gcols)
+    for i, (y, w) in enumerate(semanas):
+        r = 5 + i
+        wsg.cell(r, 1, etiqueta_semana(y, w))
+        wsg.cell(r, 2, y)
+        wsg.cell(r, 3, w)
+        cond = f'{R["anioiso"]},$B{r},{R["sem"]},$C{r},{R["estado"]},"Válida"'
+        for j, g in enumerate(gcols):
+            crit = '"*"' if g == "Total" else f'"{g}"'
+            c = wsg.cell(r, 4 + j, f'=IFERROR(SUMIFS({R["kp"]},{cond},{R["grupo"]},{crit})/'
+                                    f'SUMIFS({R["kc"]},{cond},{R["grupo"]},{crit}),"")')
+            c.number_format = PCT
+        tot = get_column_letter(nc)
+        wsg.cell(r, nc + 1, f'=IFERROR(SUMIFS({R["metakc"]},{cond})/SUMIFS({R["kc"]},{cond}),"")').number_format = PCT
+        wsg.cell(r, nc + 2, f'=IFERROR(({tot}{r}-{get_column_letter(nc + 1)}{r})*100,"")').number_format = PP
+        wsg.cell(r, nc + 3, f'=SUMIFS({R["kp"]},{cond})').number_format = KG
+        wsg.cell(r, nc + 4, f'=SUMIFS({R["kc"]},{cond})').number_format = KG
+        wsg.cell(r, nc + 5, f'=COUNTIFS({cond})')
+        for j in range(1, nc + 6):
+            wsg.cell(r, j).font = f_bold if j == nc else f_base
+            wsg.cell(r, j).border = borde
+    us = 4 + len(semanas)
+    wsg.conditional_formatting.add(f"D5:{get_column_letter(nc)}{us}", ColorScaleRule(
+        start_type="num", start_value=0.90, start_color="E34948", mid_type="num", mid_value=0.945,
+        mid_color="F0EFEC", end_type="num", end_value=0.97, end_color="2A78D6"))
+    wsg.conditional_formatting.add(f"{get_column_letter(nc + 2)}5:{get_column_letter(nc + 2)}{us}",
+                                   CellIsRule(operator="lessThan", formula=["0"], font=Font(name=F, color="D03B3B")))
+    wsg.cell(us + 2, 1, "Escala de color: rojo ≤ 90 %, gris 94,5 %, azul ≥ 97 %. Celda vacía = el grupo no produjo esa semana.").font = f_nota
+    anchos(wsg, [20, 8, 9] + [11] * len(gcols) + [10, 11, 14, 14, 10])
+    wsg.freeze_panes = "D5"
 
     # ------------------------------------------------------ Ranking productos
     wr = wb.create_sheet("Ranking productos")
@@ -388,7 +454,8 @@ def main():
     notas = [
         "Hojas",
         "• Ordenes: todas las órdenes del CSV, con grupo, medidas (mm), largo (m), rendimiento y estado. Base de todo el libro.",
-        "• Carta mensual / Carta diaria: carta de control I-MR con gráfico. Las celdas amarillas filtran por grupo o producto.",
+        "• Carta mensual / Carta semanal / Carta diaria: carta de control I-MR con gráfico y el % de cada punto. Las celdas amarillas filtran por grupo o producto.",
+        "• Grupo x semana: rendimiento de cada grupo por semana ISO (lunes a domingo), con meta y kg.",
         "• Grupo x mes: rendimiento, kg producidos y meta por grupo y mes.",
         "• Ranking productos: productos de mayor a menor kg producidos.",
         "• A corregir: órdenes sobre 100 %, excluidas de los cálculos.",

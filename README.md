@@ -16,7 +16,7 @@ python3 scripts/exportar_excel.py
 ```
 
 Genera `dashboard/Rendimiento_metalico.xlsx` con las hojas Resumen, Ordenes (base completa), Carta mensual,
-Carta diaria, Grupo x mes, Ranking productos, A corregir y Productos. Los resúmenes son fórmulas sobre la hoja
+Carta semanal, Carta diaria, Grupo x mes, Grupo x semana, Ranking productos, A corregir y Productos. Los resúmenes son fórmulas sobre la hoja
 Ordenes: si se corrige una orden ahí, todo se recalcula.
 
 ## Reglas
@@ -29,3 +29,4 @@ Ordenes: si se corrige una orden ahí, todo se recalcula.
 - Barra traspaso de carga pertenece a Redondo liso, y los productos SEMI se unifican con su equivalente.
 - Diámetros, anchos y espesores en mm (las pulgadas se convierten ×25,4) y largos en m.
 - La fecha de cada orden es su `Fecha_inicio`.
+- Las semanas son ISO 8601: de lunes a domingo, y la semana 1 es la que contiene el primer jueves del año.

@@ -202,9 +202,11 @@ details summary { cursor: pointer; color: var(--text-secondary); font-size: 12.5
     <label class="filtro"><span>Año</span><select id="f-anio"></select></label>
     <label class="filtro"><span>Desde</span><select id="f-desde"></select></label>
     <label class="filtro"><span>Hasta</span><select id="f-hasta"></select></label>
+    <label class="filtro"><span>Semana</span><select id="f-semana"></select></label>
     <div class="filtro"><span>Vista</span>
       <div class="seg" id="f-vista">
         <button type="button" data-v="dia">Diaria</button>
+        <button type="button" data-v="sem">Semanal</button>
         <button type="button" data-v="mes">Mensual</button>
         <button type="button" data-v="anio">Anual</button>
       </div>
@@ -229,9 +231,21 @@ details summary { cursor: pointer; color: var(--text-secondary); font-size: 12.5
       <span><i class="k-dash" style="border-color:var(--meta)"></i>Meta ponderada</span>
       <span><i class="k-dot" style="background:var(--critical)"></i>▲▼ Fuera de control</span>
     </div>
-    <div id="cc"></div>
+    <div id="cc" style="overflow-x:auto"></div>
     <div class="nota" id="cc-nota"></div>
     <details><summary>Ver tabla de la carta</summary><div class="tabla-wrap" id="cc-tabla" style="margin-top:8px"></div></details>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Análisis semanal por grupo</h2>
+        <p class="desc">Rendimiento de cada grupo por semana ISO (lunes a domingo), comparado con su meta. Haz clic en una semana para filtrar todo el dashboard; vuelve a hacer clic para quitar el filtro.</p>
+      </div>
+    </div>
+    <div class="leyenda" id="sem-ley"></div>
+    <div id="semanal" style="overflow-x:auto"></div>
+    <details><summary>Ver tabla semanal</summary><div class="tabla-wrap" id="sem-tabla" style="margin-top:8px"></div></details>
   </section>
 
   <section class="card">
@@ -293,6 +307,18 @@ details summary { cursor: pointer; color: var(--text-secondary); font-size: 12.5
 <script>
 const DATOS = /*__DATOS__*/null;
 
+// Semana ISO 8601: lunes a domingo; la semana 1 contiene el primer jueves del año.
+function semanaISO(d) {
+  const [y,m,dd] = d.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m-1, dd));
+  const dow = t.getUTCDay() || 7;
+  const lunes = new Date(t); lunes.setUTCDate(t.getUTCDate() - dow + 1);
+  t.setUTCDate(t.getUTCDate() + 4 - dow);
+  const anio = t.getUTCFullYear();
+  const sem = Math.ceil(((t - Date.UTC(anio,0,1)) / 864e5 + 1) / 7);
+  return { anio, sem, key: `${anio}-S${String(sem).padStart(2,"0")}`, lunes: lunes.toISOString().slice(0,10) };
+}
+
 const GRUPOS = ["B Hormigón","Redondo liso","Plana","Ángulo","Cuadrado","Estrella","Saferock","Hexágono"];
 const GCOLOR = Object.fromEntries(GRUPOS.map((g,i)=>[g,`var(--g${i+1})`]));
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -302,14 +328,15 @@ const SVGNS = "http://www.w3.org/2000/svg";
 const PROD = DATOS.productos;
 const ORD = DATOS.ordenes.map(([o,pi,d,kp,kc,meta]) => {
   const p = PROD[pi];
-  return { o, p, pi, d, anio: +d.slice(0,4), mes: +d.slice(5,7), kp, kc, meta, r: kp/kc*100, grupo: p.grupo };
+  const w = semanaISO(d);
+  return { o, p, pi, d, anio: +d.slice(0,4), mes: +d.slice(5,7), sem: w.key, semNum: w.sem, lunes: w.lunes, kp, kc, meta, r: kp/kc*100, grupo: p.grupo };
 });
 const VALIDAS = ORD.filter(x => x.r <= 100);
 const EXCLUIDAS = ORD.filter(x => x.r > 100);
 const ANIOS = [...new Set(ORD.map(x=>x.anio))].sort();
 
 // ---------- estado ----------
-const est = { anio: ANIOS[ANIOS.length-1], desde: 1, hasta: 12, vista: "mes", grupos: new Set(GRUPOS), prod: "", orden: "kg" };
+const est = { anio: ANIOS[ANIOS.length-1], desde: 1, hasta: 12, vista: "mes", semana: "", grupos: new Set(GRUPOS), prod: "", orden: "kg" };
 
 // ---------- utilidades ----------
 const nf1 = new Intl.NumberFormat("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1});
@@ -369,10 +396,11 @@ function mostrarTip(ev, titulo, filas) {
 const ocultarTip = () => tip.style.display = "none";
 
 // ---------- filtros ----------
-function filtrar(lista, {sinProd=false, sinGrupo=false, sinPeriodo=false}={}) {
+function filtrar(lista, {sinProd=false, sinGrupo=false, sinPeriodo=false, sinSemana=false}={}) {
   return lista.filter(x =>
     x.anio === est.anio &&
     (sinPeriodo || (x.mes >= est.desde && x.mes <= est.hasta)) &&
+    (sinPeriodo || sinSemana || !est.semana || x.sem === est.semana) &&
     (sinGrupo || est.grupos.has(x.grupo)) &&
     (sinProd || !est.prod || x.p.n === est.prod));
 }
@@ -381,10 +409,11 @@ function initFiltros() {
   const fa = document.getElementById("f-anio");
   ANIOS.forEach(a => fa.append(el("option",{value:a},a)));
   fa.value = est.anio;
-  fa.onchange = () => { est.anio = +fa.value; mesesDisponibles(); render(); };
+  fa.onchange = () => { est.anio = +fa.value; est.semana = ""; mesesDisponibles(); render(); };
   const fd = document.getElementById("f-desde"), fh = document.getElementById("f-hasta");
-  fd.onchange = () => { est.desde = +fd.value; if (est.hasta < est.desde) { est.hasta = est.desde; fh.value = est.hasta; } render(); };
-  fh.onchange = () => { est.hasta = +fh.value; if (est.desde > est.hasta) { est.desde = est.hasta; fd.value = est.desde; } render(); };
+  fd.onchange = () => { est.desde = +fd.value; if (est.hasta < est.desde) { est.hasta = est.desde; fh.value = est.hasta; } est.semana = ""; render(); };
+  fh.onchange = () => { est.hasta = +fh.value; if (est.desde > est.hasta) { est.desde = est.hasta; fd.value = est.desde; } est.semana = ""; render(); };
+  document.getElementById("f-semana").onchange = e => { est.semana = e.target.value; render(); };
   mesesDisponibles();
 
   document.querySelectorAll("#f-vista button").forEach(b => b.onclick = () => { est.vista = b.dataset.v; render(); });
@@ -428,7 +457,20 @@ function mesesDisponibles() {
   est.desde = ms[0]; est.hasta = ms[ms.length-1];
   fd.value = est.desde; fh.value = est.hasta;
 }
+function etiquetaSemana(key, lunes) {
+  const [y,m,d] = lunes.split("-").map(Number);
+  const fin = new Date(Date.UTC(y,m-1,d+6));
+  const f = (dd,mm) => `${dd} ${MESES[mm].toLowerCase()}`;
+  return `S${+key.slice(-2)} · ${f(d,m-1)}–${f(fin.getUTCDate(), fin.getUTCMonth())}`;
+}
+const LUNES = Object.fromEntries(ORD.map(x=>[x.sem, x.lunes]));
 function syncFiltros() {
+  const fs = document.getElementById("f-semana");
+  const sems = [...new Set(filtrar(ORD,{sinProd:true,sinGrupo:true,sinSemana:true}).map(x=>x.sem))].sort();
+  fs.replaceChildren(el("option",{value:""},`Todas (${sems.length})`));
+  sems.forEach(k => fs.append(el("option",{value:k}, etiquetaSemana(k, LUNES[k]))));
+  if (est.semana && !sems.includes(est.semana)) est.semana = "";
+  fs.value = est.semana;
   document.querySelectorAll("#f-vista button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v===est.vista));
   document.querySelectorAll("#f-orden button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v===est.orden));
   document.querySelectorAll("#f-grupos .chip").forEach(b => b.setAttribute("aria-pressed", est.grupos.has(b.dataset.g)));
@@ -442,6 +484,7 @@ function syncFiltros() {
   const g = [...est.grupos];
   document.getElementById("subtitulo").textContent =
     `Rend. met. = kg producidos / kg consumidos · ${est.anio} · ${MESES[est.desde-1]}–${MESES[est.hasta-1]} · ` +
+    (est.semana ? etiquetaSemana(est.semana, LUNES[est.semana]) + " · " : "") +
     (g.length===GRUPOS.length ? "todos los grupos" : g.join(", ")) + (est.prod ? ` · ${est.prod}` : "") +
     ` · datos: ${DATOS.fuente}` + (DATOS.maestro ? ` + ${DATOS.maestro}` : "") + ` (${DATOS.generado})`;
 }
@@ -469,13 +512,14 @@ function renderKPIs() {
 // ---------- carta de control ----------
 function puntosCarta() {
   const v = filtrar(VALIDAS);
-  const clave = est.vista==="dia" ? x=>x.d : est.vista==="mes" ? x=>`${x.anio}-${String(x.mes).padStart(2,"0")}` : x=>String(x.anio);
+  const clave = est.vista==="dia" ? x=>x.d : est.vista==="sem" ? x=>x.sem : est.vista==="mes" ? x=>`${x.anio}-${String(x.mes).padStart(2,"0")}` : x=>String(x.anio);
   const base = est.vista==="anio" ? VALIDAS.filter(x => (est.grupos.has(x.grupo)) && (!est.prod || x.p.n===est.prod)) : v;
   const g = agrupar(base, clave);
   return [...g.entries()].sort((a,b)=>a[0]<b[0]?-1:1).map(([k,l]) => ({ k, ...agregar(l), lista: l }));
 }
 function etiquetaPeriodo(k) {
   if (est.vista==="dia") return fecha(k);
+  if (est.vista==="sem") return etiquetaSemana(k, LUNES[k]);
   if (est.vista==="mes") { const [y,m]=k.split("-"); return `${MESES[+m-1]} ${y}`; }
   return k;
 }
@@ -492,16 +536,21 @@ function renderCarta() {
   const cont = document.getElementById("cc"); cont.replaceChildren();
   const pts = puntosCarta();
   const L = limites(pts);
-  const nombres = {dia:"diaria", mes:"mensual", anio:"anual"};
+  const nombres = {dia:"diaria", sem:"semanal", mes:"mensual", anio:"anual"};
   document.getElementById("cc-titulo").textContent = `Carta de control ${nombres[est.vista]} (I-MR)`;
   document.getElementById("cc-desc").textContent = est.vista==="anio"
     ? "Un punto por año con los grupos y el producto seleccionados (ignora el rango de meses)."
     : est.vista==="dia"
       ? "Un punto por día: rendimiento ponderado de las órdenes que iniciaron ese día."
+      : est.vista==="sem"
+      ? "Un punto por semana ISO (lunes a domingo): rendimiento ponderado de las órdenes que iniciaron esa semana."
       : "Un punto por mes: rendimiento ponderado de todas las órdenes del mes.";
   if (!pts.length) { cont.append(el("div",{class:"vacio"},"Sin órdenes para los filtros seleccionados.")); renderTablaCarta(pts,L); return; }
 
-  const W = anchoDe(cont), H = 340, m = {t:18, r:64, b:34, l:48};
+  // en diaria y semanal cada punto tiene un ancho fijo para que su % se lea; la carta se desplaza en horizontal
+  const paso = est.vista==="dia" ? 40 : est.vista==="sem" ? 48 : 0;
+  const m = {t:30, r:76, b:40, l:48}, H = 370;
+  const W = Math.max(anchoDe(cont), paso ? m.l + m.r + 20 + pts.length*paso : 0);
   const vals = pts.map(p=>p.r).concat([L.ucl,L.lcl,L.meta,L.cl].filter(v=>v!=null));
   let y0 = Math.min(...vals), y1 = Math.max(...vals);
   const pad = Math.max(0.5,(y1-y0)*0.08); y0 -= pad; y1 = Math.min(Math.max(y1+pad, y0+1), 100.5);
@@ -517,7 +566,7 @@ function renderCarta() {
   // etiquetas X (espaciadas)
   const cada = Math.max(1, Math.ceil(pts.length / Math.floor((W-m.l-m.r)/64)));
   pts.forEach((p,i) => { if (i % cada === 0 || i===pts.length-1 && pts.length<30)
-    svg.append(s("text",{x:x(i),y:H-m.b+17,"text-anchor":"middle"}, est.vista==="dia" ? fecha(p.k).replace(/ \d{4}$/,"") : etiquetaPeriodo(p.k))); });
+    svg.append(s("text",{x:x(i),y:H-m.b+17,"text-anchor":"middle"}, est.vista==="dia" ? fecha(p.k).replace(/ \d{4}$/,"") : est.vista==="sem" ? "S"+(+p.k.slice(-2)) : etiquetaPeriodo(p.k))); });
 
   const ref = (v, color, lbl, dash) => { if (v==null) return;
     svg.append(s("line",{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),stroke:color,"stroke-width":1.5,"stroke-dasharray":dash||null}));
@@ -540,7 +589,15 @@ function renderCarta() {
     const out = (L.ucl!=null && p.r > L.ucl) || (L.lcl!=null && p.r < L.lcl);
     if (out) fuera.push(p);
     svg.append(s("circle",{cx:x(i),cy:y(p.r),r: out? rad+1.5 : rad, fill: out?"var(--critical)":"var(--serie-proceso)", stroke:"var(--surface-1)","stroke-width":2}));
-    if (out) { const t = s("text",{x:x(i),y: p.r > L.ucl ? y(p.r)-10 : y(p.r)+18,"text-anchor":"middle"}, p.r > L.ucl ? "▲" : "▼"); t.style.fill="var(--critical)"; svg.append(t); }
+    // % de rendimiento en cada punto: arriba, o abajo si el punto es un valle
+    const prev = pts[i-1]?.r ?? p.r, next = pts[i+1]?.r ?? p.r;
+    const abajo = p.r < prev && p.r < next;
+    const yl = abajo ? y(p.r)+17 : y(p.r)-9;
+    const lbl = s("text",{x:x(i),y:yl,"text-anchor":"middle"}, nf1.format(p.r)+"%");
+    lbl.style.fill = out ? "var(--critical)" : "var(--text-primary)"; lbl.style.fontSize = "10px"; lbl.style.fontWeight = out ? "700" : "500";
+    lbl.style.paintOrder = "stroke"; lbl.style.stroke = "var(--surface-1)"; lbl.style.strokeWidth = "3px";
+    svg.append(lbl);
+    if (out) { const t = s("text",{x:x(i),y: abajo ? yl+12 : yl-12,"text-anchor":"middle"}, p.r > L.ucl ? "▲" : "▼"); t.style.fill="var(--critical)"; svg.append(t); }
   });
   // crosshair
   const cross = s("line",{y1:m.t,y2:H-m.b,stroke:"var(--axis)","stroke-width":1,visibility:"hidden"});
@@ -566,11 +623,12 @@ function renderCarta() {
   hit.addEventListener("pointerleave", () => { cross.setAttribute("visibility","hidden"); ocultarTip(); });
   svg.append(hit);
   cont.append(svg);
+  if (paso) cont.scrollLeft = cont.scrollWidth; // mostrar lo más reciente
 
   const nota = document.getElementById("cc-nota");
-  nota.textContent = L.sigma==null ? "Se necesitan al menos 2 puntos para calcular límites de control." :
+  nota.textContent = (paso && W > anchoDe(cont) ? "Desliza la carta hacia la izquierda para ver los períodos anteriores. " : "") + (L.sigma==null ? "Se necesitan al menos 2 puntos para calcular límites de control." :
     `LC = ${pct(L.cl)} · σ estimada = MR̄/1,128 = ${nf2.format(L.sigma)} pp · LCS = ${pct(L.ucl)} · LCI = ${pct(L.lcl)} · ` +
-    (fuera.length ? `${fuera.length} punto(s) fuera de control: ${fuera.map(p=>etiquetaPeriodo(p.k)+" ("+pct(p.r)+")").join(", ")}.` : "Todos los puntos dentro de control.");
+    (fuera.length ? `${fuera.length} punto(s) fuera de control: ${fuera.map(p=>etiquetaPeriodo(p.k)+" ("+pct(p.r)+")").join(", ")}.` : "Todos los puntos dentro de control."));
   renderTablaCarta(pts, L);
 }
 function renderTablaCarta(pts, L) {
@@ -587,6 +645,83 @@ function renderTablaCarta(pts, L) {
     tb.append(r);
   });
   t.append(tb); cont.append(t);
+}
+
+// ---------- análisis semanal ----------
+function renderSemanal() {
+  const cont = document.getElementById("semanal"); cont.replaceChildren();
+  const ley = document.getElementById("sem-ley"); ley.replaceChildren();
+  const tabla = document.getElementById("sem-tabla"); tabla.replaceChildren();
+  const cs = getComputedStyle(document.documentElement);
+  const cNeg = cs.getPropertyValue("--div-neg").trim(), cMid = cs.getPropertyValue("--div-mid").trim(), cPos = cs.getPropertyValue("--div-pos").trim();
+  const LIM = 4;
+  const color = d => d>=0 ? mezcla(cMid,cPos,Math.min(1,d/LIM)) : mezcla(cMid,cNeg,Math.min(1,-d/LIM));
+  [-4,-2,-1,0,1,2,4].forEach(d => { const sp = el("span"); const k = el("i",{class:"k-rect"}); k.style.background=color(d); sp.append(k, document.createTextNode((d>0?"+":"")+d+(Math.abs(d)===4?"+":"")+" pp vs meta")); ley.append(sp); });
+  const sp = el("span"); const k = el("i",{class:"k-rect"}); k.style.outline="2px solid var(--text-primary)"; sp.append(k, document.createTextNode("Semana filtrada")); ley.append(sp);
+
+  // no aplica el filtro de semana para poder ver y elegir todas
+  const v = filtrar(VALIDAS, {sinSemana:true});
+  if (!v.length) { cont.append(el("div",{class:"vacio"},"Sin datos.")); return; }
+  const sems = [...new Set(v.map(x=>x.sem))].sort();
+  const porG = agrupar(v, x=>x.grupo);
+  const filas = GRUPOS.filter(g=>porG.has(g)).map(g => ({ g, m: agrupar(porG.get(g), x=>x.sem) }));
+  filas.push({ g: "Total", m: agrupar(v, x=>x.sem) });
+
+  const W0 = anchoDe(cont), colNom = 104;
+  const cw = Math.max(44, Math.min(56, (W0 - colNom - 8) / sems.length)), ch = 26; // ≥ 44 px para que quepa el %
+  const W = colNom + cw*sems.length + 4, H = 34 + filas.length*ch + 8;
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Rendimiento semanal por grupo"});
+  sems.forEach((k,j) => {
+    const x0 = colNom + cw*j;
+    const t = s("text",{x:x0+cw/2,y:12,"text-anchor":"middle"}, "S"+(+k.slice(-2)));
+    if (k===est.semana) { t.style.fill="var(--text-primary)"; t.style.fontWeight="700"; }
+    svg.append(t);
+    const [y,m,d] = LUNES[k].split("-").map(Number);
+    if (j===0 || (d<=7)) svg.append(s("text",{x:x0+cw/2,y:25,"text-anchor":"middle"}, MESES[m-1]));
+  });
+  filas.forEach((f,i) => {
+    const yy = 34 + i*ch + (f.g==="Total" ? 6 : 0);
+    const t = s("text",{x:0,y:yy+ch/2+4}, f.g); t.style.fill="var(--text-primary)"; t.style.fontSize="12px"; if (f.g==="Total") t.style.fontWeight="700";
+    svg.append(t);
+    if (f.g!=="Total") { const kk = s("rect",{x:colNom-14,y:yy+ch/2-4,width:8,height:8,rx:2,fill:GCOLOR[f.g]}); svg.append(kk); }
+    sems.forEach((key,j) => {
+      const x0 = colNom + cw*j;
+      if (!f.m.has(key)) { svg.append(s("rect",{x:x0+1,y:yy+1,width:cw-2,height:ch-2,rx:3,fill:"none",stroke:"var(--grid)"})); return; }
+      const a = agregar(f.m.get(key)); const d = a.meta!=null ? a.r - a.meta : 0;
+      const fill = color(d);
+      const rc = s("rect",{x:x0+1,y:yy+1,width:cw-2,height:ch-2,rx:3,fill,style:"cursor:pointer"});
+      if (key===est.semana) { rc.setAttribute("stroke","var(--text-primary)"); rc.setAttribute("stroke-width","2"); }
+      svg.append(rc);
+      if (cw >= 40) {
+        const c3 = [1,3,5].map(q=>parseInt(fill.slice(q,q+2),16)/255), lum = 0.2126*c3[0]+0.7152*c3[1]+0.0722*c3[2];
+        const tx = s("text",{x:x0+cw/2,y:yy+ch/2+4,"text-anchor":"middle"}, nf1.format(a.r));
+        tx.style.fill = lum>0.45?"#0b0b0b":"#ffffff"; tx.style.fontSize="10.5px"; tx.style.pointerEvents="none";
+        if (f.g==="Total") tx.style.fontWeight="700";
+        svg.append(tx);
+      }
+      rc.addEventListener("pointermove", ev => mostrarTip(ev, `${f.g} · ${etiquetaSemana(key, LUNES[key])} ${key.slice(0,4)}`, [
+        ["Rend. met.", pct(a.r), f.g==="Total" ? "var(--serie-proceso)" : GCOLOR[f.g]], ["Meta", pct(a.meta)],
+        ["vs meta", (d>=0?"+":"")+nf2.format(d)+" pp"], ["Kg producidos", kg(a.kp)], ["Órdenes", nf0.format(a.cnt)] ]));
+      rc.addEventListener("pointerleave", ocultarTip);
+      rc.addEventListener("click", () => { est.semana = est.semana===key ? "" : key; if (est.semana && est.vista==="sem") est.vista = "dia"; ocultarTip(); render(); });
+    });
+  });
+  cont.append(svg);
+  if (cont.scrollWidth > cont.clientWidth) cont.scrollLeft = cont.scrollWidth; // semanas más recientes a la vista
+
+  // tabla semanal (total del filtro)
+  const t = el("table"), tr = el("tr");
+  ["Semana","Desde","Órdenes","Kg producidos","Kg consumidos","Rend. met.","Meta","vs meta"].forEach((h,i)=>tr.append(el("th",{class:i>1?"n":""},h)));
+  const th = el("thead"); th.append(tr); t.append(th);
+  const tb = el("tbody"); const tot = filas[filas.length-1].m;
+  sems.forEach(key => {
+    const a = agregar(tot.get(key)); const d = a.meta!=null ? a.r-a.meta : null;
+    const r = el("tr");
+    [ "S"+(+key.slice(-2))+" "+key.slice(0,4), fecha(LUNES[key]), nf0.format(a.cnt), nf0.format(a.kp), nf0.format(a.kc), pct(a.r), pct(a.meta), d==null?"—":(d>=0?"▲ +":"▼ ")+nf2.format(d)+" pp" ]
+      .forEach((val,i)=>r.append(el("td",{class:(i>1?"n":"")+(i===7&&d!=null?(d>=0?" delta-pos":" delta-neg"):"")},val)));
+    tb.append(r);
+  });
+  t.append(tb); tabla.append(t);
 }
 
 // ---------- small multiples por grupo ----------
@@ -842,7 +977,7 @@ function renderCorregir() {
 // ---------- render ----------
 function render() {
   syncFiltros();
-  renderKPIs(); renderCarta(); renderMultiples(); renderVolumen(); renderGrupos(); renderRanking(); renderHeat(); renderCorregir();
+  renderKPIs(); renderCarta(); renderSemanal(); renderMultiples(); renderVolumen(); renderGrupos(); renderRanking(); renderHeat(); renderCorregir();
 }
 initFiltros();
 render();
