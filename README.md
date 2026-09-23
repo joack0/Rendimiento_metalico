@@ -30,3 +30,18 @@ Ordenes: si se corrige una orden ahí, todo se recalcula.
 - Diámetros, anchos y espesores en mm (las pulgadas se convierten ×25,4) y largos en m.
 - La fecha de cada orden es su `Fecha_inicio`.
 - Las semanas son ISO 8601: de lunes a domingo, y la semana 1 es la que contiene el primer jueves del año.
+
+## Palanquillas fuera de grado
+
+```bash
+python3 scripts/preparar_fuera_grado.py [datos/palanquillas_fuera_grado.tsv]
+```
+
+Genera `dashboard/fuera_grado.html` con los promedios de palanquillas fuera de grado por grupo, producto y mes.
+
+- Cada fila de la planilla es un registro; el promedio es Σ cantidad / registros con cantidad.
+- Los nombres escritos a mano se normalizan a grupo + medida (PLANO/PALNA/PÑANA → Plana, REDC/R/RCR/HORM/REND → B Hormigón,
+  SAF/SF/SAFERRO → Saferock, RED/LISO → Redondo liso, etc.). Una medida sin nombre (ej. `50X5`) toma el grupo de la fila anterior.
+- Las pulgadas de planas se llevan a su nombre en mm (1 1/4" × 3/16" → 32x4,85).
+- Fechas con año fuera de secuencia se corrigen al año de la fila anterior y un largo `34` se lee como 3,4 m.
+  Todas las correcciones se listan en la sección «Calidad del registro».

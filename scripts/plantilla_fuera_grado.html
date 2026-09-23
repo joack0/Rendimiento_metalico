@@ -1,0 +1,735 @@
+<title>Palanquillas fuera de grado</title>
+<style>
+:root {
+  color-scheme: light;
+  --aza-rojo: #c8102e;
+  --aza-grafito: #2b2b2b;
+  --page: #f5f5f3;
+  --surface-1: #ffffff;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #6f6e69;
+  --grid: #e8e7e1;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --hover: rgba(11,11,11,0.04);
+  --total: #2b2b2b;
+  --ref: #898781;
+  --neutro: #a3a29b;
+  --warn-bg: #fdf3dc; --warn-ink: #7a5200;
+  --g1: #2a78d6; --g2: #eb6834; --g3: #1baf7a; --g4: #eda100;
+  --g5: #e87ba4; --g6: #008300; --g7: #4a3aa7; --g8: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --aza-rojo: #e8354b;
+    --aza-grafito: #0d0d0d;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #9a9890;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --hover: rgba(255,255,255,0.06);
+    --total: #e6e5df;
+    --ref: #898781;
+    --neutro: #6f6e69;
+    --warn-bg: #3a2d10; --warn-ink: #f0c56a;
+    --g1: #3987e5; --g2: #d95926; --g3: #199e70; --g4: #c98500;
+    --g5: #d55181; --g6: #008300; --g7: #9085e9; --g8: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --aza-rojo: #e8354b;
+  --aza-grafito: #0d0d0d;
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #9a9890;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --hover: rgba(255,255,255,0.06);
+  --total: #e6e5df;
+  --ref: #898781;
+  --neutro: #6f6e69;
+  --warn-bg: #3a2d10; --warn-ink: #f0c56a;
+  --g1: #3987e5; --g2: #d95926; --g3: #199e70; --g4: #c98500;
+  --g5: #d55181; --g6: #008300; --g7: #9085e9; --g8: #e66767;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--text-primary);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+header {
+  background: var(--aza-grafito); color: #fff;
+  border-bottom: 4px solid var(--aza-rojo);
+  padding: 18px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+header h1 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: .2px; text-wrap: balance; }
+header p { margin: 2px 0 0; color: #c9c8c2; font-size: 12.5px; }
+.marca { display: flex; align-items: center; gap: 12px; }
+.marca-bloque { width: 10px; height: 34px; background: var(--aza-rojo); border-radius: 2px; flex: none; }
+#tema { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: 12.5px; }
+main { max-width: 1320px; margin: 0 auto; padding: 16px 24px 48px; }
+:focus-visible { outline: 2px solid var(--aza-rojo); outline-offset: 2px; }
+
+.filtros {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--page); padding-block: 12px;
+  display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end;
+  border-bottom: 1px solid var(--border);
+}
+.filtro { display: flex; flex-direction: column; gap: 4px; }
+.filtro > span { font-size: 11.5px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+select, input[type="search"] {
+  font: inherit; color: var(--text-primary); background: var(--surface-1);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; min-height: 34px; max-width: 100%;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+  border-radius: 999px; padding: 5px 11px; min-height: 32px; cursor: pointer;
+}
+.chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.chip[aria-pressed="true"] { color: var(--text-primary); border-color: var(--text-primary); font-weight: 600; }
+.chip[aria-pressed="false"] i { opacity: .35; }
+.chip small { color: var(--text-muted); font-weight: 400; }
+.btn-link { font: inherit; font-size: 11.5px; background: none; border: 0; color: var(--aza-rojo); cursor: pointer; padding: 0 2px; text-decoration: underline; text-transform: none; letter-spacing: 0; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0; }
+.kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.kpi.hero { border-top: 3px solid var(--aza-rojo); grid-column: span 2; }
+.kpi .lbl { font-size: 12.5px; color: var(--text-secondary); }
+.kpi .val { font-size: 26px; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.kpi.hero .val { font-size: 36px; line-height: 1.1; }
+.kpi .val small { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+.kpi .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.hallazgos { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; }
+.hallazgos h2 { font-size: 15.5px; margin: 0 0 6px; }
+.hallazgos ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; max-width: 95ch; }
+.hallazgos li::marker { color: var(--aza-rojo); }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 960px) { .grid2 { grid-template-columns: 1fr; } }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; min-width: 0; }
+.card h2 { font-size: 15.5px; margin: 0; font-weight: 650; }
+.card .desc { color: var(--text-secondary); font-size: 12.5px; margin: 3px 0 10px; max-width: 95ch; }
+.card-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-secondary); margin: 6px 0; }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.k-line { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+.k-dash { width: 16px; height: 0; border-top: 2px dashed; display: inline-block; }
+.k-rect { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+svg { display: block; overflow: visible; }
+svg text { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg text.lbl { fill: var(--text-primary); font-size: 12px; }
+svg text.val { fill: var(--text-secondary); font-size: 11.5px; }
+.vacio { color: var(--text-muted); padding: 30px 0; text-align: center; }
+.multiples { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.multiples h3 { font-size: 13px; margin: 0 0 2px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.multiples h3 small { color: var(--text-muted); font-weight: 400; margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.tabla-wrap { overflow-x: auto; max-height: 520px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { position: sticky; top: 0; background: var(--surface-1); color: var(--text-secondary); font-weight: 600; z-index: 1; }
+th button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+th[aria-sort] button { color: var(--text-primary); }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:hover { background: var(--hover); }
+td.wrap { white-space: normal; min-width: 220px; }
+.barra { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; width: 100%; }
+.barra i { display: inline-block; height: 8px; border-radius: 0 3px 3px 0; }
+.pill { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--warn-bg); color: var(--warn-ink); margin: 1px 4px 1px 0; }
+.k-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.controles { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+details summary { cursor: pointer; color: var(--text-secondary); font-size: 12.5px; margin-top: 8px; }
+.nota { font-size: 12px; color: var(--text-muted); margin-top: 8px; max-width: 95ch; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--surface-1); }
+.seg button { font: inherit; border: 0; background: transparent; color: var(--text-secondary); padding: 6px 12px; min-height: 34px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--aza-rojo); color: #fff; font-weight: 600; }
+
+#tip {
+  position: fixed; pointer-events: none; z-index: 20; display: none;
+  background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.15); font-size: 12.5px; max-width: 320px;
+}
+#tip .t { color: var(--text-secondary); margin-bottom: 4px; }
+#tip .r { display: flex; align-items: center; gap: 14px; justify-content: space-between; }
+#tip .r b { font-variant-numeric: tabular-nums; }
+#tip .r span { color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 600px) {
+  header, main { padding-left: 16px; padding-right: 16px; }
+  .kpi.hero { grid-column: auto; }
+  .kpi.hero .val { font-size: 32px; }
+  .filtros { position: static; }
+}
+</style>
+
+<header>
+  <div class="marca">
+    <div class="marca-bloque"></div>
+    <div>
+      <h1>Palanquillas fuera de grado por producto</h1>
+      <p id="subtitulo"></p>
+    </div>
+  </div>
+  <button id="tema" type="button">Cambiar tema</button>
+</header>
+<main>
+  <section class="filtros" aria-label="Filtros">
+    <label class="filtro"><span>Desde</span><select id="f-desde"></select></label>
+    <label class="filtro"><span>Hasta</span><select id="f-hasta"></select></label>
+    <div class="filtro"><span>Grupo <button class="btn-link" id="g-todos" type="button">todos</button></span><div class="chips" id="f-grupos"></div></div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Indicadores"></section>
+
+  <section class="hallazgos" aria-label="Hallazgos">
+    <h2>Lo que muestran los datos</h2>
+    <ul id="hallazgos"></ul>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Promedio de palanquillas por registro, según grupo</h2>
+      <p class="desc">Palanquillas fuera de grado ÷ registros con cantidad. La línea punteada es el promedio de la selección. «Otros» y «Sin identificar» se ven en el resumen por grupo.</p>
+      <div id="ch-grupos"></div>
+    </section>
+    <section class="card">
+      <h2>¿Cuántas palanquillas se usan por registro?</h2>
+      <p class="desc">Número de registros según la cantidad de palanquillas anotada.</p>
+      <div id="ch-hist"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Evolución mensual del promedio</h2>
+    <p class="desc">Promedio de palanquillas por registro en cada mes (todos los grupos seleccionados). Pasa el cursor para ver el detalle del mes.</p>
+    <div class="leyenda">
+      <span><i class="k-line" style="border-color:var(--total)"></i>Promedio mensual</span>
+      <span><i class="k-dash" style="border-color:var(--ref)"></i>Promedio del período</span>
+    </div>
+    <div id="ch-prom-mes"></div>
+  </section>
+
+  <section class="card">
+    <h2>Palanquillas fuera de grado por mes</h2>
+    <p class="desc">Total de palanquillas utilizadas, apilado por grupo.</p>
+    <div class="leyenda" id="ley-mes"></div>
+    <div id="ch-tot-mes"></div>
+  </section>
+
+  <section class="card">
+    <h2>Promedio mensual por grupo</h2>
+    <p class="desc">Una gráfica por grupo, con la misma escala. Los meses sin registros quedan vacíos; la línea gris punteada es el promedio histórico del grupo.</p>
+    <div class="multiples" id="multiples"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Promedio por producto</h2>
+        <p class="desc">Producto normalizado (grupo + medida). Haz clic en un encabezado para ordenar. «% sobre 3» es la proporción de registros con más de 3 palanquillas.</p>
+      </div>
+    </div>
+    <div class="controles">
+      <label class="filtro"><span>Buscar</span><input type="search" id="p-buscar" placeholder="ej. 50x5, 25 mm, 1 1/2"></label>
+      <label class="filtro"><span>Mínimo de registros</span>
+        <select id="p-min"><option value="1">1 o más</option><option value="3" selected>3 o más</option><option value="5">5 o más</option><option value="10">10 o más</option></select>
+      </label>
+    </div>
+    <div class="tabla-wrap" id="t-prod"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Resumen por grupo</h2>
+      <p class="desc">Estadística de la cantidad de palanquillas por registro y metros de palanquilla (Σ cantidad × largo).</p>
+      <div class="tabla-wrap" id="t-grupos"></div>
+    </section>
+    <section class="card">
+      <h2>Largo de palanquilla por grupo</h2>
+      <p class="desc">Registros según el largo anotado (m).</p>
+      <div class="tabla-wrap" id="t-largos"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Calidad del registro</h2>
+    <p class="desc">Correcciones aplicadas al leer la planilla. Los registros sin cantidad no entran en los promedios; los sin producto se muestran como «Sin identificar».</p>
+    <div class="leyenda" id="calidad-resumen"></div>
+    <div class="tabla-wrap" id="t-calidad"></div>
+    <details><summary>Ver cómo se interpretó cada nombre escrito en la planilla</summary><div class="tabla-wrap" id="t-mapeo" style="margin-top:8px"></div></details>
+  </section>
+
+  <section class="card">
+    <h2>Registros</h2>
+    <p class="desc">Todos los registros del período y grupos seleccionados.</p>
+    <div class="controles"><label class="filtro"><span>Buscar</span><input type="search" id="r-buscar" placeholder="producto, fecha o nombre original"></label></div>
+    <div class="tabla-wrap" id="t-reg"></div>
+  </section>
+</main>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const DATOS = /*__DATOS__*/[];
+
+const GRUPOS = ["B Hormigón","Redondo liso","Plana","Ángulo","Cuadrado","Estrella","Saferock","Hexágono"];
+const EXTRA = ["Otros","Sin identificar"];
+const GCOLOR = Object.fromEntries(GRUPOS.map((g,i)=>[g,`var(--g${i+1})`]));
+EXTRA.forEach(g => GCOLOR[g] = "var(--neutro)");
+const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const SVGNS = "http://www.w3.org/2000/svg";
+
+const REG = DATOS.map(r => ({ ...r, mes: r.f.slice(0,7) }));
+const TODOS_MESES = (() => {
+  const ms = REG.map(r=>r.mes).sort(); const out = [];
+  let [y,m] = ms[0].split("-").map(Number); const [y1,m1] = ms[ms.length-1].split("-").map(Number);
+  while (y < y1 || (y === y1 && m <= m1)) { out.push(`${y}-${String(m).padStart(2,"0")}`); m++; if (m>12) { m=1; y++; } }
+  return out;
+})();
+const GRUPOS_PRESENTES = [...GRUPOS, ...EXTRA].filter(g => REG.some(r => r.g === g));
+
+const est = { desde: TODOS_MESES[0], hasta: TODOS_MESES[TODOS_MESES.length-1], grupos: new Set(GRUPOS_PRESENTES), orden: { k: "prom", dir: -1 } };
+
+// ---------- utilidades ----------
+const nf1 = new Intl.NumberFormat("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1});
+const nf2 = new Intl.NumberFormat("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2});
+const nf0 = new Intl.NumberFormat("es-CL",{maximumFractionDigits:0});
+const mesLbl = m => { const [y,mm] = m.split("-"); return `${MESES[+mm-1]} ${y}`; };
+const mesCorto = m => { const [y,mm] = m.split("-"); return +mm===1 || m===est.desde ? `${MESES[+mm-1]} ${y.slice(2)}` : MESES[+mm-1]; };
+const fecha = d => { const [y,m,dd]=d.split("-"); return `${dd}-${m}-${y}`; };
+const pctf = v => nf0.format(v*100)+" %";
+
+function el(tag, attrs={}, text) {
+  const n = tag.startsWith("svg:") ? document.createElementNS(SVGNS, tag.slice(4)) : document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) if (v!=null) n.setAttribute(k, v);
+  if (text!=null) n.textContent = text;
+  return n;
+}
+const s = (tag, attrs, text) => el("svg:"+tag, attrs, text);
+function escala(d0, d1, r0, r1) { return v => r0 + (v-d0)/(d1-d0||1)*(r1-r0); }
+function ticks(min, max, n=5) {
+  const paso0 = (max-min)/n, mag = Math.pow(10, Math.floor(Math.log10(paso0||1)));
+  const paso = [1,2,2.5,5,10].map(k=>k*mag).find(k=>k>=paso0) || mag*10;
+  const out=[]; for (let v=Math.ceil(min/paso)*paso; v<=max+1e-9; v+=paso) out.push(+v.toFixed(6)); return out;
+}
+const techo = (max, n=4) => { const t = ticks(0, max, n); return t[t.length-1] >= max ? t[t.length-1] : t[t.length-1] + (t[1]-t[0]); };
+function anchoDe(node) { return Math.max(280, node.clientWidth || 600); }
+function agrupar(lista, clave) {
+  const m = new Map();
+  for (const x of lista) { const k = clave(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); }
+  return m;
+}
+function stats(lista) {
+  const c = lista.filter(r => r.c != null).map(r => r.c).sort((a,b)=>a-b);
+  const tot = c.reduce((a,b)=>a+b,0);
+  const n = c.length;
+  const med = n ? (n%2 ? c[(n-1)/2] : (c[n/2-1]+c[n/2])/2) : null;
+  const prom = n ? tot/n : null;
+  const sd = n > 1 ? Math.sqrt(c.reduce((a,v)=>a+(v-prom)**2,0)/(n-1)) : null;
+  const metros = lista.reduce((a,r)=>a + (r.c && r.l ? r.c*r.l : 0), 0);
+  return { reg: lista.length, n, tot, prom, med, sd, min: n?c[0]:null, max: n?c[n-1]:null,
+           sobre3: n ? c.filter(v=>v>3).length/n : null, metros };
+}
+
+// ---------- tooltip ----------
+const tip = document.getElementById("tip");
+function mostrarTip(ev, titulo, filas) {
+  tip.replaceChildren(el("div",{class:"t"},titulo));
+  for (const [lbl, val, color] of filas) {
+    const r = el("div",{class:"r"}); const sp = el("span");
+    if (color) { const k = el("i",{class:"k-rect"}); k.style.background = color; sp.append(k); }
+    sp.append(document.createTextNode(lbl)); r.append(sp, el("b",{},val)); tip.append(r);
+  }
+  tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+  tip.style.left = x+"px"; tip.style.top = y+"px";
+}
+const ocultarTip = () => tip.style.display = "none";
+function hover(node, titulo, filas) {
+  node.addEventListener("mousemove", ev => mostrarTip(ev, titulo, typeof filas === "function" ? filas() : filas));
+  node.addEventListener("mouseleave", ocultarTip);
+}
+
+// ---------- filtros ----------
+const filtrar = ({sinGrupo=false}={}) => REG.filter(r => r.mes >= est.desde && r.mes <= est.hasta && (sinGrupo || est.grupos.has(r.g)));
+const mesesSel = () => TODOS_MESES.filter(m => m >= est.desde && m <= est.hasta);
+
+function initFiltros() {
+  const fd = document.getElementById("f-desde"), fh = document.getElementById("f-hasta");
+  TODOS_MESES.forEach(m => { fd.append(el("option",{value:m},mesLbl(m))); fh.append(el("option",{value:m},mesLbl(m))); });
+  fd.value = est.desde; fh.value = est.hasta;
+  fd.onchange = () => { est.desde = fd.value; if (est.hasta < est.desde) { est.hasta = est.desde; fh.value = est.hasta; } render(); };
+  fh.onchange = () => { est.hasta = fh.value; if (est.desde > est.hasta) { est.desde = est.hasta; fd.value = est.desde; } render(); };
+  const cont = document.getElementById("f-grupos");
+  GRUPOS_PRESENTES.forEach(g => {
+    const b = el("button",{type:"button",class:"chip","data-g":g});
+    const i = el("i"); i.style.background = GCOLOR[g];
+    b.append(i, document.createTextNode(g));
+    b.onclick = () => {
+      if (est.grupos.size === GRUPOS_PRESENTES.length) { est.grupos = new Set([g]); }
+      else if (est.grupos.has(g)) { est.grupos.delete(g); if (!est.grupos.size) est.grupos = new Set(GRUPOS_PRESENTES); }
+      else est.grupos.add(g);
+      render();
+    };
+    cont.append(b);
+  });
+  document.getElementById("g-todos").onclick = () => { est.grupos = new Set(GRUPOS_PRESENTES); render(); };
+  document.getElementById("p-buscar").oninput = () => renderProductos(filtrar());
+  document.getElementById("p-min").onchange = () => renderProductos(filtrar());
+  document.getElementById("r-buscar").oninput = () => renderRegistros(filtrar());
+  document.getElementById("tema").onclick = () => {
+    const r = document.documentElement;
+    const oscuro = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    r.dataset.theme = oscuro ? "light" : "dark";
+  };
+}
+
+// ---------- KPIs y hallazgos ----------
+function renderKpis(lista) {
+  const st = stats(lista);
+  const box = document.getElementById("kpis"); box.replaceChildren();
+  const kpi = (lbl, val, sub, hero, unidad) => {
+    const d = el("div",{class:"kpi"+(hero?" hero":"")});
+    const v = el("div",{class:"val"},val); if (unidad) v.append(" ", el("small",{},unidad));
+    d.append(el("div",{class:"lbl"},lbl), v, el("div",{class:"sub"},sub)); box.append(d);
+  };
+  kpi("Promedio de palanquillas por registro", st.prom!=null ? nf2.format(st.prom) : "—",
+      st.n ? `mediana ${nf1.format(st.med)} · desviación ${st.sd!=null?nf2.format(st.sd):"—"} · rango ${st.min}–${st.max}` : "sin datos", true, "pal/reg");
+  kpi("Palanquillas fuera de grado", nf0.format(st.tot), `en ${nf0.format(st.n)} registros con cantidad`);
+  kpi("Registros", nf0.format(st.reg), `${mesesSel().length} meses · ${nf1.format(st.reg / Math.max(1, mesesSel().length))} por mes`);
+  kpi("Registros con más de 3", st.sobre3!=null ? pctf(st.sobre3) : "—", "la cantidad habitual es 3");
+  kpi("Metros de palanquilla", nf0.format(st.metros), "Σ cantidad × largo", false, "m");
+  document.getElementById("subtitulo").textContent =
+    `${mesLbl(est.desde)} – ${mesLbl(est.hasta)} · ${nf0.format(st.reg)} registros · calidad FGRADO`;
+}
+
+function renderHallazgos(lista) {
+  const ul = document.getElementById("hallazgos"); ul.replaceChildren();
+  const st = stats(lista);
+  if (!st.n) { ul.append(el("li",{},"No hay registros para la selección.")); return; }
+  const li = (html) => { const l = el("li"); l.innerHTML = html; ul.append(l); };
+  const porG = [...agrupar(lista, r=>r.g)].map(([g,rs]) => ({ g, ...stats(rs) })).filter(x => x.n >= 5 && !EXTRA.includes(x.g));
+  const moda = [...agrupar(lista.filter(r=>r.c!=null), r=>r.c)].sort((a,b)=>b[1].length-a[1].length)[0];
+  li(`El registro típico usa <b>${moda[0]} palanquillas</b> (${pctf(moda[1].length/st.n)} de los registros); el promedio es <b>${nf2.format(st.prom)}</b> porque ${pctf(st.sobre3)} de los registros supera esa cantidad.`);
+  if (porG.length > 1) {
+    const ord = [...porG].sort((a,b)=>b.prom-a.prom);
+    li(`Mayor promedio: <b>${ord[0].g}</b> con ${nf2.format(ord[0].prom)} pal/reg (${pctf(ord[0].sobre3)} de sus registros sobre 3). Menor: <b>${ord[ord.length-1].g}</b> con ${nf2.format(ord[ord.length-1].prom)}.`);
+    const vol = [...porG].sort((a,b)=>b.tot-a.tot);
+    const top2 = vol.slice(0,2); const share = (top2[0].tot + (top2[1]?.tot||0)) / st.tot;
+    li(`Por volumen, <b>${top2.map(x=>x.g).join("</b> y <b>")}</b> concentran ${pctf(share)} de las palanquillas fuera de grado: más por frecuencia de registros que por cantidad en cada uno.`);
+  }
+  const prods = [...agrupar(lista, r=>r.p)].map(([p,rs]) => ({ p, ...stats(rs) })).filter(x => x.n >= 3 && !EXTRA.includes(x.p));
+  const altos = prods.filter(x => x.prom >= 4).sort((a,b)=>b.prom-a.prom).slice(0,4);
+  if (altos.length) li(`Productos con 3 o más registros y promedio de 4 o más: ${altos.map(x=>`<b>${x.p}</b> (${nf1.format(x.prom)}, ${x.n} reg.)`).join(", ")}. Son los primeros a revisar.`);
+  const ms = mesesSel();
+  if (ms.length >= 6) {
+    const mitad = Math.floor(ms.length/2);
+    const a = stats(lista.filter(r => r.mes < ms[mitad])), b = stats(lista.filter(r => r.mes >= ms[mitad]));
+    if (a.n && b.n) {
+      const d = b.prom - a.prom;
+      li(`Tendencia: el promedio pasó de ${nf2.format(a.prom)} (${mesLbl(ms[0])} – ${mesLbl(ms[mitad-1])}) a ${nf2.format(b.prom)} (${mesLbl(ms[mitad])} – ${mesLbl(ms[ms.length-1])}), ${Math.abs(d) < 0.05 ? "prácticamente estable" : d > 0 ? `<b>sube ${nf2.format(d)}</b> pal/reg` : `<b>baja ${nf2.format(-d)}</b> pal/reg`}.`);
+    }
+  }
+  if (!REG.some(r => r.g === "Estrella"))
+    li(`No hay registros de <b>Estrella</b> en la planilla.`);
+}
+
+// ---------- gráficos ----------
+function barrasGrupo(lista) {
+  const cont = document.getElementById("ch-grupos"); cont.replaceChildren();
+  const filas = GRUPOS_PRESENTES.filter(g => est.grupos.has(g) && !EXTRA.includes(g)).map(g => ({ g, ...stats(lista.filter(r=>r.g===g)) })).filter(x=>x.n).sort((a,b)=>b.prom-a.prom);
+  if (!filas.length) { cont.append(el("div",{class:"vacio"},"Sin datos")); return; }
+  const glob = stats(lista).prom;
+  const W = anchoDe(cont), izq = 104, der = 150, fila = 30, top = 18, H = top + filas.length*fila + 22;
+  const xmax = techo(Math.max(...filas.map(f=>f.prom)));
+  const x = escala(0, xmax, izq, W - der);
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Promedio de palanquillas por registro según grupo"});
+  ticks(0, xmax, 4).forEach(t => {
+    svg.append(s("line",{x1:x(t),x2:x(t),y1:top-4,y2:H-20,stroke:"var(--grid)"}));
+    svg.append(s("text",{x:x(t),y:H-6,"text-anchor":"middle"},nf1.format(t)));
+  });
+  filas.forEach((f,i) => {
+    const y = top + i*fila, bh = 14, yb = y + (fila-bh)/2;
+    const g = s("g");
+    g.append(s("rect",{x:0,y,width:W,height:fila,fill:"transparent"}));
+    g.append(s("text",{class:"lbl",x:izq-10,y:y+fila/2+4,"text-anchor":"end"},f.g));
+    const w = Math.max(1, x(f.prom)-izq);
+    g.append(s("path",{d:`M${izq},${yb} h${w-4} a4,4 0 0 1 4,4 v${bh-8} a4,4 0 0 1 -4,4 h${-(w-4)} Z`,fill:GCOLOR[f.g]}));
+    g.append(s("text",{class:"val",x:x(f.prom)+8,y:y+fila/2+4},`${nf2.format(f.prom)}  ·  ${f.n} reg · ${nf0.format(f.tot)} pal`));
+    hover(g, f.g, [["Promedio", nf2.format(f.prom), GCOLOR[f.g]],["Mediana", nf1.format(f.med)],["Máximo", f.max],["Registros", f.n],["Palanquillas", nf0.format(f.tot)],["% sobre 3", pctf(f.sobre3)]]);
+    svg.append(g);
+  });
+  svg.append(s("line",{x1:x(glob),x2:x(glob),y1:top-8,y2:H-20,stroke:"var(--ref)","stroke-width":1.5,"stroke-dasharray":"4 3"}));
+  svg.append(s("text",{x:x(glob),y:top-10,"text-anchor":"middle"},`prom. ${nf2.format(glob)}`));
+  cont.append(svg);
+}
+
+function histograma(lista) {
+  const cont = document.getElementById("ch-hist"); cont.replaceChildren();
+  const c = lista.filter(r=>r.c!=null);
+  if (!c.length) { cont.append(el("div",{class:"vacio"},"Sin datos")); return; }
+  const maxC = Math.max(...c.map(r=>r.c)); const cats = Array.from({length:maxC},(_,i)=>i+1);
+  const cnt = cats.map(k => c.filter(r=>r.c===k).length);
+  const W = anchoDe(cont), H = 230, izq = 36, der = 8, top = 22, bot = 34;
+  const ymax = techo(Math.max(...cnt));
+  const y = escala(0, ymax, H-bot, top);
+  const bw = (W-izq-der)/cats.length;
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Distribución de palanquillas por registro"});
+  ticks(0, ymax, 4).forEach(t => {
+    svg.append(s("line",{x1:izq,x2:W-der,y1:y(t),y2:y(t),stroke:"var(--grid)"}));
+    svg.append(s("text",{x:izq-6,y:y(t)+4,"text-anchor":"end"},nf0.format(t)));
+  });
+  cats.forEach((k,i) => {
+    const x0 = izq + i*bw + 2, w = Math.min(46, bw-4), xc = izq + i*bw + bw/2, h = H-bot-y(cnt[i]);
+    const g = s("g");
+    g.append(s("rect",{x:izq+i*bw,y:top,width:bw,height:H-bot-top,fill:"transparent"}));
+    if (cnt[i]) g.append(s("path",{d:`M${xc-w/2},${H-bot} v${-(h-4)} a4,4 0 0 1 4,-4 h${w-8} a4,4 0 0 1 4,4 v${h-4} Z`,fill: k===3 ? "var(--total)" : "var(--aza-rojo)"}));
+    if (cnt[i]) g.append(s("text",{class:"val",x:xc,y:y(cnt[i])-6,"text-anchor":"middle"},pctf(cnt[i]/c.length)));
+    g.append(s("text",{x:xc,y:H-bot+16,"text-anchor":"middle"},k));
+    hover(g, `${k} palanquilla${k>1?"s":""} por registro`, [["Registros", cnt[i]],["Participación", pctf(cnt[i]/c.length)]]);
+    svg.append(g);
+  });
+  svg.append(s("text",{x:izq+(W-izq-der)/2,y:H-2,"text-anchor":"middle"},"palanquillas por registro"));
+  cont.append(svg);
+  const n = el("div",{class:"leyenda"});
+  n.innerHTML = `<span><i class="k-rect" style="background:var(--total)"></i>Cantidad habitual (3)</span><span><i class="k-rect" style="background:var(--aza-rojo)"></i>Distinta de 3</span>`;
+  cont.append(n);
+}
+
+function lineaMensual(lista) {
+  const cont = document.getElementById("ch-prom-mes"); cont.replaceChildren();
+  const ms = mesesSel();
+  const pts = ms.map(m => ({ m, ...stats(lista.filter(r=>r.mes===m)) }));
+  const glob = stats(lista).prom;
+  if (glob == null) { cont.append(el("div",{class:"vacio"},"Sin datos")); return; }
+  const W = anchoDe(cont), H = 240, izq = 40, der = 14, top = 16, bot = 30;
+  const vals = pts.filter(p=>p.n).map(p=>p.prom);
+  const ymin = Math.max(0, Math.floor(Math.min(...vals, glob)*2)/2 - 0.5), ymax = Math.ceil(Math.max(...vals, glob)*2)/2 + 0.25;
+  const x = escala(0, Math.max(1, ms.length-1), izq, W-der), y = escala(ymin, ymax, H-bot, top);
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Promedio mensual de palanquillas por registro"});
+  ticks(ymin, ymax, 4).forEach(t => {
+    svg.append(s("line",{x1:izq,x2:W-der,y1:y(t),y2:y(t),stroke:"var(--grid)"}));
+    svg.append(s("text",{x:izq-6,y:y(t)+4,"text-anchor":"end"},nf1.format(t)));
+  });
+  const paso = Math.ceil(ms.length / Math.max(1, Math.floor((W-izq-der)/48)));
+  ms.forEach((m,i) => { if (i % paso === 0) svg.append(s("text",{x:x(i),y:H-bot+16,"text-anchor":"middle"},mesCorto(m))); });
+  svg.append(s("line",{x1:izq,x2:W-der,y1:y(glob),y2:y(glob),stroke:"var(--ref)","stroke-width":1.5,"stroke-dasharray":"4 3"}));
+  // área + línea (se corta en meses sin datos)
+  let d = "", area = "", tramo = [];
+  const cerrar = () => { if (tramo.length) { area += `M${tramo[0][0]},${H-bot} ` + tramo.map(p=>`L${p[0]},${p[1]}`).join(" ") + ` L${tramo[tramo.length-1][0]},${H-bot} Z `; } tramo = []; };
+  pts.forEach((p,i) => { if (p.n) { const P=[x(i),y(p.prom)]; d += (tramo.length ? "L":"M")+P[0]+","+P[1]+" "; tramo.push(P); } else cerrar(); });
+  cerrar();
+  svg.append(s("path",{d:area,fill:"var(--total)","fill-opacity":0.07}));
+  svg.append(s("path",{d,fill:"none",stroke:"var(--total)","stroke-width":2,"stroke-linejoin":"round"}));
+  pts.forEach((p,i) => { if (p.n) svg.append(s("circle",{cx:x(i),cy:y(p.prom),r:i===pts.length-1?5:3.5,fill:"var(--total)",stroke:"var(--surface-1)","stroke-width":2})); });
+  const ult = [...pts].reverse().find(p=>p.n);
+  if (ult) { const i = pts.indexOf(ult); svg.append(s("text",{class:"lbl",x:Math.min(x(i), W-der-4),y:y(ult.prom)-10,"text-anchor":"end"},nf2.format(ult.prom))); }
+  // capa de hover
+  const guia = s("line",{y1:top,y2:H-bot,stroke:"var(--axis)",visibility:"hidden"}); svg.append(guia);
+  const capa = s("rect",{x:izq,y:top,width:W-izq-der,height:H-bot-top,fill:"transparent"});
+  capa.addEventListener("mousemove", ev => {
+    const r = svg.getBoundingClientRect(); const i = Math.max(0, Math.min(ms.length-1, Math.round((ev.clientX - r.left - izq)/((W-izq-der)/Math.max(1,ms.length-1)))));
+    const p = pts[i]; guia.setAttribute("x1", x(i)); guia.setAttribute("x2", x(i)); guia.setAttribute("visibility","visible");
+    const porG = GRUPOS_PRESENTES.filter(g=>est.grupos.has(g)).map(g => [g, stats(lista.filter(r=>r.mes===p.m && r.g===g))]).filter(([,st])=>st.n);
+    mostrarTip(ev, mesLbl(p.m), p.n ? [["Promedio", nf2.format(p.prom), "var(--total)"],["Registros", p.n],["Palanquillas", nf0.format(p.tot)], ...porG.map(([g,st]) => [g, `${nf2.format(st.prom)} (${st.n})`, GCOLOR[g]])] : [["Sin registros",""]]);
+  });
+  capa.addEventListener("mouseleave", () => { ocultarTip(); guia.setAttribute("visibility","hidden"); });
+  svg.append(capa);
+  cont.append(svg);
+}
+
+function barrasMes(lista) {
+  const cont = document.getElementById("ch-tot-mes"); cont.replaceChildren();
+  const ley = document.getElementById("ley-mes"); ley.replaceChildren();
+  const ms = mesesSel(); const gs = GRUPOS_PRESENTES.filter(g=>est.grupos.has(g) && lista.some(r=>r.g===g));
+  gs.forEach(g => { const sp = el("span"); const k = el("i",{class:"k-rect"}); k.style.background = GCOLOR[g]; sp.append(k, document.createTextNode(g)); ley.append(sp); });
+  const datos = ms.map(m => { const rs = lista.filter(r=>r.mes===m); return { m, seg: gs.map(g => ({ g, v: rs.filter(r=>r.g===g).reduce((a,r)=>a+(r.c||0),0) })), tot: rs.reduce((a,r)=>a+(r.c||0),0) }; });
+  const W = anchoDe(cont), H = 260, izq = 40, der = 8, top = 18, bot = 30;
+  const ymax = techo(Math.max(1, ...datos.map(d=>d.tot)));
+  const y = escala(0, ymax, H-bot, top); const bw = (W-izq-der)/ms.length; const w = Math.max(4, Math.min(34, bw-4));
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Palanquillas fuera de grado por mes y grupo"});
+  ticks(0, ymax, 4).forEach(t => { svg.append(s("line",{x1:izq,x2:W-der,y1:y(t),y2:y(t),stroke:"var(--grid)"})); svg.append(s("text",{x:izq-6,y:y(t)+4,"text-anchor":"end"},nf0.format(t))); });
+  const paso = Math.ceil(ms.length / Math.max(1, Math.floor((W-izq-der)/48)));
+  datos.forEach((d,i) => {
+    const xc = izq + i*bw + bw/2, g = s("g");
+    g.append(s("rect",{x:izq+i*bw,y:top,width:bw,height:H-bot-top,fill:"transparent"}));
+    let acc = 0; const vis = d.seg.filter(sg=>sg.v);
+    vis.forEach((sg,j) => {
+      const y0 = y(acc), y1 = y(acc+sg.v); acc += sg.v;
+      const h = Math.max(0, y0 - y1 - (j < vis.length-1 ? 2 : 0));
+      const ult = j === vis.length-1, r = Math.min(4, h, w/2);
+      const path = ult ? `M${xc-w/2},${y0} v${-(h-r)} a${r},${r} 0 0 1 ${r},${-r} h${w-2*r} a${r},${r} 0 0 1 ${r},${r} v${h-r} Z`
+                       : `M${xc-w/2},${y0} v${-h} h${w} v${h} Z`;
+      if (h > 0) g.append(s("path",{d:path,fill:GCOLOR[sg.g]}));
+    });
+    if (i % paso === 0) g.append(s("text",{x:xc,y:H-bot+16,"text-anchor":"middle"},mesCorto(d.m)));
+    hover(g, `${mesLbl(d.m)} · ${nf0.format(d.tot)} palanquillas`, d.seg.filter(sg=>sg.v).sort((a,b)=>b.v-a.v).map(sg=>[sg.g, nf0.format(sg.v), GCOLOR[sg.g]]));
+    svg.append(g);
+  });
+  cont.append(svg);
+}
+
+function multiples(lista) {
+  const cont = document.getElementById("multiples"); cont.replaceChildren();
+  const ms = mesesSel();
+  const gs = GRUPOS_PRESENTES.filter(g=>est.grupos.has(g) && !EXTRA.includes(g) && lista.some(r=>r.g===g && r.c!=null));
+  const series = gs.map(g => { const rs = lista.filter(r=>r.g===g); return { g, st: stats(rs), pts: ms.map(m => stats(rs.filter(r=>r.mes===m))) }; });
+  const vmax = Math.max(4, ...series.flatMap(sr=>sr.pts.filter(p=>p.n).map(p=>p.prom)));
+  const ymin = 2, ymax = Math.ceil(vmax);
+  series.forEach(sr => {
+    const box = el("div"); const h3 = el("h3"); const k = el("i",{class:"k-rect"}); k.style.background = GCOLOR[sr.g];
+    h3.append(k, document.createTextNode(sr.g), el("small",{},`prom. ${nf2.format(sr.st.prom)} · ${sr.st.n} reg`)); box.append(h3); cont.append(box);
+    const W = anchoDe(box), H = 120, izq = 22, der = 6, top = 8, bot = 18;
+    const x = escala(0, Math.max(1, ms.length-1), izq, W-der), y = escala(ymin, ymax, H-bot, top);
+    const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":`Promedio mensual de ${sr.g}`});
+    for (let t = ymin; t <= ymax; t++) { svg.append(s("line",{x1:izq,x2:W-der,y1:y(t),y2:y(t),stroke:"var(--grid)"})); svg.append(s("text",{x:izq-4,y:y(t)+4,"text-anchor":"end"},t)); }
+    svg.append(s("line",{x1:izq,x2:W-der,y1:y(sr.st.prom),y2:y(sr.st.prom),stroke:"var(--ref)","stroke-dasharray":"3 3"}));
+    svg.append(s("text",{x:izq,y:H-3},mesCorto(ms[0]))); svg.append(s("text",{x:W-der,y:H-3,"text-anchor":"end"},mesCorto(ms[ms.length-1])));
+    let d = "", prev = false;
+    sr.pts.forEach((p,i) => { if (p.n) { d += (prev?"L":"M")+x(i)+","+y(Math.min(p.prom,ymax))+" "; prev = true; } else prev = false; });
+    svg.append(s("path",{d,fill:"none",stroke:GCOLOR[sr.g],"stroke-width":2,"stroke-linejoin":"round"}));
+    sr.pts.forEach((p,i) => {
+      if (!p.n) return;
+      const c = s("circle",{cx:x(i),cy:y(Math.min(p.prom,ymax)),r:3,fill:GCOLOR[sr.g],stroke:"var(--surface-1)","stroke-width":1.5});
+      svg.append(c);
+      const hit = s("circle",{cx:x(i),cy:y(Math.min(p.prom,ymax)),r:9,fill:"transparent"});
+      hover(hit, `${sr.g} · ${mesLbl(ms[i])}`, [["Promedio", nf2.format(p.prom), GCOLOR[sr.g]],["Registros", p.n],["Palanquillas", p.tot]]);
+      svg.append(hit);
+    });
+    box.append(svg);
+  });
+  if (!series.length) cont.append(el("div",{class:"vacio"},"Sin datos"));
+}
+
+// ---------- tablas ----------
+function tabla(cont, cols, filas, opts={}) {
+  const t = el("table"), th = el("thead"), tr = el("tr");
+  cols.forEach(c => {
+    const h = el("th",{class:c.n?"n":null});
+    if (opts.orden && c.k) {
+      const b = el("button",{type:"button"}, c.t + (opts.orden.k===c.k ? (opts.orden.dir<0?" ↓":" ↑") : ""));
+      if (opts.orden.k===c.k) h.setAttribute("aria-sort", opts.orden.dir<0?"descending":"ascending");
+      b.onclick = () => opts.onOrden(c.k); h.append(b);
+    } else h.textContent = c.t;
+    tr.append(h);
+  });
+  th.append(tr); t.append(th);
+  const tb = el("tbody");
+  filas.forEach(f => { const r = el("tr"); cols.forEach(c => { const td = el("td",{class:(c.n?"n":"")+(c.wrap?" wrap":"")}); const v = c.f(f); if (v instanceof Node) td.append(v); else td.textContent = v ?? "—"; r.append(td); }); tb.append(r); });
+  t.append(tb); cont.replaceChildren(filas.length ? t : el("div",{class:"vacio"},"Sin registros"));
+}
+const conPunto = (g, txt) => { const f = document.createDocumentFragment(); const k = el("i",{class:"k-dot"}); k.style.background = GCOLOR[g]; f.append(k, document.createTextNode(txt)); return f; };
+
+function renderProductos(lista) {
+  const q = document.getElementById("p-buscar").value.trim().toLowerCase();
+  const min = +document.getElementById("p-min").value;
+  let filas = [...agrupar(lista, r=>r.p)].map(([p,rs]) => ({ p, g: rs[0].g, ult: rs.map(r=>r.f).sort().pop(), nombres: new Set(rs.map(r=>r.orig||"(vacío)")).size, ...stats(rs) }))
+    .filter(f => f.n >= min && (!q || f.p.toLowerCase().includes(q)));
+  const o = est.orden; filas.sort((a,b) => { const va=a[o.k], vb=b[o.k]; return (typeof va === "string" ? va.localeCompare(vb) : (va??-1)-(vb??-1)) * o.dir || b.tot - a.tot; });
+  const pmax = Math.max(...filas.map(f=>f.prom||0), 1);
+  const barra = f => { const w = el("span",{class:"barra"}); const i = el("i"); i.style.width = (f.prom/pmax*70)+"px"; i.style.background = GCOLOR[f.g]; w.append(el("b",{},nf2.format(f.prom)), i); return w; };
+  tabla(document.getElementById("t-prod"), [
+    {t:"Producto",k:"p",f:f=>conPunto(f.g,f.p)},
+    {t:"Registros",k:"n",n:1,f:f=>f.n},
+    {t:"Palanquillas",k:"tot",n:1,f:f=>nf0.format(f.tot)},
+    {t:"Promedio",k:"prom",n:1,f:barra},
+    {t:"Mediana",k:"med",n:1,f:f=>nf1.format(f.med)},
+    {t:"Mín–máx",n:1,f:f=>`${f.min}–${f.max}`},
+    {t:"% sobre 3",k:"sobre3",n:1,f:f=>pctf(f.sobre3)},
+    {t:"Último registro",k:"ult",f:f=>fecha(f.ult)},
+  ], filas, { orden: o, onOrden: k => { est.orden = { k, dir: est.orden.k===k ? -est.orden.dir : (k==="p"?1:-1) }; renderProductos(filtrar()); } });
+}
+
+function renderGrupos(lista) {
+  const filas = GRUPOS_PRESENTES.filter(g=>est.grupos.has(g)).map(g => ({ g, prods: new Set(lista.filter(r=>r.g===g).map(r=>r.p)).size, ...stats(lista.filter(r=>r.g===g)) })).filter(f=>f.reg);
+  const st = stats(lista);
+  filas.push({ g: "Total", prods: new Set(lista.map(r=>r.p)).size, ...st });
+  tabla(document.getElementById("t-grupos"), [
+    {t:"Grupo",f:f=>f.g==="Total"?el("b",{},"Total"):conPunto(f.g,f.g)},
+    {t:"Productos",n:1,f:f=>f.prods},
+    {t:"Registros",n:1,f:f=>f.reg},
+    {t:"Palanquillas",n:1,f:f=>nf0.format(f.tot)},
+    {t:"% del total",n:1,f:f=>st.tot?pctf(f.tot/st.tot):"—"},
+    {t:"Promedio",n:1,f:f=>f.prom!=null?nf2.format(f.prom):"—"},
+    {t:"Mediana",n:1,f:f=>f.med!=null?nf1.format(f.med):"—"},
+    {t:"Desv.",n:1,f:f=>f.sd!=null?nf2.format(f.sd):"—"},
+    {t:"Máx",n:1,f:f=>f.max},
+    {t:"% sobre 3",n:1,f:f=>f.sobre3!=null?pctf(f.sobre3):"—"},
+    {t:"Metros",n:1,f:f=>nf0.format(f.metros)},
+  ], filas);
+}
+
+function renderLargos(lista) {
+  const largos = [...new Set(lista.map(r=>r.l))].sort((a,b)=>(b??-1)-(a??-1));
+  const filas = GRUPOS_PRESENTES.filter(g=>est.grupos.has(g)).map(g => { const rs = lista.filter(r=>r.g===g); return { g, rs }; }).filter(f=>f.rs.length);
+  tabla(document.getElementById("t-largos"), [
+    {t:"Grupo",f:f=>conPunto(f.g,f.g)},
+    ...largos.map(l => ({ t: l==null ? "Sin largo" : nf1.format(l)+" m", n:1, f: f => { const c = f.rs.filter(r=>r.l===l).length; return c ? `${c} (${pctf(c/f.rs.length)})` : "·"; } })),
+  ], filas);
+}
+
+function renderCalidad() {
+  const conObs = REG.filter(r => r.obs.length);
+  const tipos = agrupar(conObs.flatMap(r => r.obs.map(o => o.replace(/\s*\(.*\)$/,""))), o=>o);
+  const res = document.getElementById("calidad-resumen"); res.replaceChildren();
+  [...tipos].sort((a,b)=>b[1].length-a[1].length).forEach(([t,v]) => res.append(el("span",{class:"pill"},`${t}: ${v.length}`)));
+  tabla(document.getElementById("t-calidad"), [
+    {t:"Fila",n:1,f:r=>r.i},
+    {t:"Fecha",f:r=>fecha(r.f)},
+    {t:"Escrito en la planilla",f:r=>r.orig||"(vacío)"},
+    {t:"Interpretado como",f:r=>conPunto(r.g,r.p)},
+    {t:"Cantidad",n:1,f:r=>r.c},
+    {t:"Largo",n:1,f:r=>r.l!=null?nf1.format(r.l):null},
+    {t:"Observación",wrap:1,f:r=>{ const f = document.createDocumentFragment(); r.obs.forEach(o=>f.append(el("span",{class:"pill"},o))); return f; }},
+  ], conObs);
+  const mapa = [...agrupar(REG, r=>r.p)].map(([p,rs]) => ({ p, g: rs[0].g, n: rs.length, nombres: [...new Set(rs.map(r=>r.orig.trim()||"(vacío)"))].sort() })).sort((a,b)=>a.g.localeCompare(b.g) || a.p.localeCompare(b.p, "es", {numeric:true}));
+  tabla(document.getElementById("t-mapeo"), [
+    {t:"Producto normalizado",f:m=>conPunto(m.g,m.p)},
+    {t:"Registros",n:1,f:m=>m.n},
+    {t:"Nombres encontrados",wrap:1,f:m=>m.nombres.join(" · ")},
+  ], mapa);
+}
+
+function renderRegistros(lista) {
+  const q = document.getElementById("r-buscar").value.trim().toLowerCase();
+  const filas = lista.filter(r => !q || [r.p, r.orig, fecha(r.f), r.g].some(v => v.toLowerCase().includes(q))).sort((a,b)=>b.f.localeCompare(a.f) || b.i-a.i);
+  tabla(document.getElementById("t-reg"), [
+    {t:"Fecha",f:r=>fecha(r.f)},
+    {t:"Producto",f:r=>conPunto(r.g,r.p)},
+    {t:"Escrito como",f:r=>r.orig||"(vacío)"},
+    {t:"Cantidad",n:1,f:r=>r.c},
+    {t:"Largo (m)",n:1,f:r=>r.l!=null?nf1.format(r.l):null},
+    {t:"Colada",f:r=>r.col},
+    {t:"Calidad",f:r=>r.cal},
+  ], filas);
+}
+
+// ---------- render ----------
+function render() {
+  document.querySelectorAll("#f-grupos .chip").forEach(b => b.setAttribute("aria-pressed", est.grupos.has(b.dataset.g)));
+  const lista = filtrar();
+  renderKpis(lista); renderHallazgos(lista);
+  barrasGrupo(lista); histograma(lista); lineaMensual(lista); barrasMes(lista); multiples(lista);
+  renderProductos(lista); renderGrupos(lista); renderLargos(lista); renderRegistros(lista);
+}
+initFiltros(); renderCalidad(); render();
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 150); });
+</script>
