@@ -16,7 +16,7 @@ python3 scripts/exportar_excel.py
 ```
 
 Genera `dashboard/Rendimiento_metalico.xlsx` con las hojas Resumen, Ordenes (base completa), Carta mensual,
-Carta semanal, Carta diaria, Grupo x mes, Grupo x semana, Grupo x día, Ranking productos, A corregir y Productos. Los resúmenes son fórmulas sobre la hoja
+Carta semanal, Carta diaria, Grupo x mes, Grupo x semana, Grupo x día, Pareto semanal, Ranking productos, A corregir y Productos. Los resúmenes son fórmulas sobre la hoja
 Ordenes: si se corrige una orden ahí, todo se recalcula.
 
 ## Reglas
@@ -30,3 +30,11 @@ Ordenes: si se corrige una orden ahí, todo se recalcula.
 - Diámetros, anchos y espesores en mm (las pulgadas se convierten ×25,4) y largos en m.
 - La fecha de cada orden es su `Fecha_inicio`.
 - Las semanas son ISO 8601: de lunes a domingo, y la semana 1 es la que contiene el primer jueves del año.
+
+## Pareto semanal
+
+- Mide los **kg faltantes** para cumplir la meta: kg consumidos × (meta − rendimiento).
+- Los ítems que suman el 80 % de los kg faltantes de la semana son los prioritarios.
+- **Actuar ya:** está dentro del 80 % y tiene una brecha ≥ 2 pp o estuvo bajo meta en ≥ 2 de las 4 semanas previas.
+- **Plan de mejora:** está dentro del 80 %, pero no cumple lo anterior.
+- **Monitorear:** está fuera del 80 %.

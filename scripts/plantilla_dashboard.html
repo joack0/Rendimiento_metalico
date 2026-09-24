@@ -24,6 +24,7 @@
   --centro: #898781;
   --meta: #1baf7a;
   --critical: #d03b3b;
+  --serious: #ec835a;
   --good: #0ca30c;
   --div-neg: #d03b3b;
   --div-mid: #f0efec;
@@ -256,6 +257,42 @@ details summary { cursor: pointer; color: var(--text-secondary); font-size: 12.5
     <details><summary>Ver tabla diaria</summary><div class="tabla-wrap" id="dia-tabla" style="margin-top:8px"></div></details>
   </section>
 
+  <section class="card" id="pareto-card">
+    <div class="card-head">
+      <div>
+        <h2>Pareto semanal: dónde mejorar</h2>
+        <p class="desc"><b id="pareto-desc"></b> Ordena por <b>kg faltantes</b> para cumplir la meta (kg consumidos × brecha), así pesa más un producto grande con bajo rendimiento que uno chico. Los ítems que suman el 80 % son los prioritarios.</p>
+      </div>
+      <div class="filtro"><span>Agrupar por</span>
+        <div class="seg" id="f-nivel">
+          <button type="button" data-v="producto">Producto</button>
+          <button type="button" data-v="formato">Formato</button>
+          <button type="button" data-v="grupo">Grupo</button>
+        </div>
+      </div>
+    </div>
+    <div class="leyenda">
+      <span><b style="color:var(--critical)">●</b> Actuar ya: está en el 80 % y la brecha es ≥ 2 pp, o ya estuvo bajo meta 2 o más de las 4 semanas previas</span>
+      <span><b style="color:var(--serious)">◐</b> Plan de mejora: está en el 80 %, brecha menor y no se repite</span>
+      <span><b style="color:var(--text-muted)">○</b> Monitorear: fuera del 80 %</span>
+    </div>
+    <div class="leyenda">
+      <span><i class="k-rect" style="background:var(--critical)"></i>Semana previa bajo meta</span>
+      <span><i class="k-rect" style="background:var(--good)"></i>Semana previa en meta</span>
+      <span><i class="k-rect" style="border:1px solid var(--grid)"></i>Sin producción</span>
+      <span><i style="display:inline-block;width:2px;height:12px;background:var(--aza-rojo)"></i>Corte del 80 %</span>
+    </div>
+    <div id="pareto"></div>
+    <h3 style="font-size:14px;margin:18px 0 2px">Recurrencia: ¿cuántas veces aparece en el 80 % en las últimas 8 semanas?</h3>
+    <p class="desc">Si aparece seguido, es un problema de fondo del producto y necesita un plan de mejora. Si aparece una sola vez, basta con revisar qué pasó esa semana.</p>
+    <div class="leyenda">
+      <span><i class="k-rect" style="background:var(--aza-rojo)"></i>En el 80 % del Pareto</span>
+      <span><i class="k-rect" style="background:var(--div-mid);border:1px solid var(--axis)"></i>Bajo meta, fuera del 80 %</span>
+      <span><i class="k-rect" style="border:1px solid var(--grid)"></i>Sin producción o en meta</span>
+    </div>
+    <div id="pareto-rec"></div>
+  </section>
+
   <section class="card">
     <h2>Rendimiento mensual por grupo</h2>
     <p class="desc">Una gráfica por grupo, misma escala. La línea gris es el total de los grupos seleccionados.</p>
@@ -344,7 +381,7 @@ const EXCLUIDAS = ORD.filter(x => x.r > 100);
 const ANIOS = [...new Set(ORD.map(x=>x.anio))].sort();
 
 // ---------- estado ----------
-const est = { anio: ANIOS[ANIOS.length-1], desde: 1, hasta: 12, vista: "mes", semana: "", grupos: new Set(GRUPOS), prod: "", orden: "kg" };
+const est = { anio: ANIOS[ANIOS.length-1], desde: 1, hasta: 12, vista: "mes", semana: "", nivelPareto: "producto", grupos: new Set(GRUPOS), prod: "", orden: "kg" };
 
 // ---------- utilidades ----------
 const nf1 = new Intl.NumberFormat("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1});
@@ -426,6 +463,7 @@ function initFiltros() {
 
   document.querySelectorAll("#f-vista button").forEach(b => b.onclick = () => { est.vista = b.dataset.v; render(); });
   document.querySelectorAll("#f-orden button").forEach(b => b.onclick = () => { est.orden = b.dataset.v; render(); });
+  document.querySelectorAll("#f-nivel button").forEach(b => b.onclick = () => { est.nivelPareto = b.dataset.v; render(); });
 
   const fg = document.getElementById("f-grupos");
   const conDatos = new Set(ORD.map(x=>x.grupo));
@@ -768,6 +806,163 @@ function renderDiario() {
     : "Todos los días del período (desliza hacia la izquierda para ver los anteriores). Haz clic en un día para filtrar su semana.";
 }
 
+// ---------- Pareto semanal de kg faltantes vs meta ----------
+// kg faltantes = kg consumidos × (meta − rendimiento). Mide cuánto metal faltó para cumplir la meta,
+// así un producto de mucho volumen con rendimiento bajo pesa más que uno chico.
+const PARETO_CORTE = 80;       // % acumulado que define los ítems prioritarios
+const PARETO_PREVIAS = 4;      // semanas previas para medir recurrencia
+const PARETO_BRECHA_ALTA = 2;  // pp bajo meta que se consideran brecha alta
+function clavePareto(x) {
+  if (est.nivelPareto === "grupo") return x.grupo;
+  if (est.nivelPareto === "formato") return `${x.grupo} · ${x.p.formato || x.p.desc}`;
+  return x.p.n;
+}
+function itemsPareto(lista) {
+  return [...agrupar(lista, clavePareto).entries()].map(([k,l]) => {
+    const a = agregar(l);
+    const falt = a.meta!=null ? a.kc * (a.meta - a.r) / 100 : 0;
+    return { k, grupo: l[0].grupo, p: l[0].p, lista: l, ...a, brecha: a.meta!=null ? a.meta - a.r : 0, falt };
+  });
+}
+function renderPareto() {
+  const cont = document.getElementById("pareto"); cont.replaceChildren();
+  const rec = document.getElementById("pareto-rec"); rec.replaceChildren();
+  document.querySelectorAll("#f-nivel button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v===est.nivelPareto));
+  const base = filtrar(VALIDAS, {sinSemana:true});
+  const sems = [...new Set(base.map(x=>x.sem))].sort();
+  if (!sems.length) { cont.append(el("div",{class:"vacio"},"Sin datos para los filtros seleccionados.")); return; }
+  const sem = est.semana && sems.includes(est.semana) ? est.semana : sems[sems.length-1];
+  const iSem = sems.indexOf(sem);
+  const porSem = agrupar(base, x=>x.sem);
+  const previas = sems.slice(Math.max(0, iSem-PARETO_PREVIAS), iSem);
+  const bajoMetaPrev = new Map(); // clave -> nº de semanas previas bajo meta
+  previas.forEach(w => itemsPareto(porSem.get(w)).forEach(it => { if (it.falt > 0) bajoMetaPrev.set(it.k, (bajoMetaPrev.get(it.k)||0) + 1); }));
+
+  const todos = itemsPareto(porSem.get(sem));
+  const bajo = todos.filter(it=>it.falt>0).sort((a,b)=>b.falt-a.falt);
+  const sobre = todos.filter(it=>it.falt<=0).sort((a,b)=>a.falt-b.falt);
+  const totFalt = bajo.reduce((s,it)=>s+it.falt,0);
+  let acc = 0;
+  bajo.forEach(it => {
+    const antes = acc; acc += it.falt; it.acum = acc/totFalt*100;
+    it.enCorte = antes/totFalt*100 < PARETO_CORTE;       // entra hasta cruzar el 80 %
+    it.prev = bajoMetaPrev.get(it.k) || 0;
+    it.prio = !it.enCorte ? "mon" : (it.brecha >= PARETO_BRECHA_ALTA || it.prev >= 2) ? "ya" : "plan";
+  });
+  const aSem = agregar(porSem.get(sem));
+  document.getElementById("pareto-desc").textContent =
+    `${etiquetaSemana(sem, LUNES[sem])} ${sem.slice(0,4)}` + (est.semana ? "" : " (última semana del filtro; elige otra en el filtro Semana o haciendo clic en la tabla semanal)") + ".";
+
+  // resumen de la semana
+  const res = el("div",{class:"kpis",style:"margin:4px 0 12px"});
+  const tile = (lbl,val,sub,cls) => { const d = el("div",{class:"kpi"}); d.append(el("div",{class:"lbl"},lbl), el("div",{class:"val"},val)); if (sub) d.append(el("div",{class:"sub "+(cls||"")},sub)); res.append(d); };
+  const dif = aSem.meta!=null ? aSem.r - aSem.meta : null;
+  tile("Rend. de la semana", pct(aSem.r), dif==null?"":`${dif>=0?"▲ +":"▼ "}${nf2.format(dif)} pp vs meta ${pct(aSem.meta)}`, dif==null?"":dif>=0?"delta-pos":"delta-neg");
+  tile("Kg faltantes vs meta", kg(Math.round(totFalt)), `${bajo.length} ítems bajo su meta`);
+  const nCorte = bajo.filter(it=>it.enCorte).length;
+  tile(`Explican el ${PARETO_CORTE} %`, `${nCorte} de ${bajo.length}`, "ítems en los que enfocarse");
+  tile("Actuar ya", String(bajo.filter(it=>it.prio==="ya").length), `brecha ≥ ${PARETO_BRECHA_ALTA} pp o repetido`, bajo.some(it=>it.prio==="ya")?"delta-neg":"");
+  cont.append(res);
+
+  if (!bajo.length) { cont.append(el("div",{class:"vacio"},"Todos los ítems de la semana cumplieron su meta.")); }
+  else {
+    const maxF = bajo[0].falt;
+    const t = el("table",{class:"pareto"}), tr = el("tr");
+    const cab = ["#", est.nivelPareto==="grupo"?"Grupo":est.nivelPareto==="formato"?"Formato":"Producto", "Órd.", "Kg consumidos", "Rend. / meta", "Brecha", "Kg faltantes", "% acumulado", "Sem. previas bajo meta", "Prioridad"];
+    cab.forEach((h,i)=>tr.append(el("th",{class:[0,2,3,4,5].includes(i)?"n":""},h)));
+    const th = el("thead"); th.append(tr); t.append(th);
+    const tb = el("tbody");
+    const PRIO = { ya: ["Actuar ya","var(--critical)","●"], plan: ["Plan de mejora","var(--serious)","◐"], mon: ["Monitorear","var(--text-muted)","○"] };
+    bajo.forEach((it,i) => {
+      const r = el("tr");
+      if (!it.enCorte) r.style.opacity = ".72";
+      r.append(el("td",{class:"n"},String(i+1)));
+      const c1 = el("td",{style:"white-space:normal;min-width:170px"});
+      const dot = el("i",{class:"k-dot",style:"margin-right:6px"}); dot.style.background = GCOLOR[it.grupo] || "var(--text-muted)";
+      c1.append(dot, document.createTextNode(est.nivelPareto==="producto" ? `${it.grupo} ${it.p.desc}` : it.k));
+      if (est.nivelPareto==="producto") c1.append(el("div",{style:"font-size:11px;color:var(--text-muted)"}, it.k));
+      r.append(c1);
+      [nf0.format(it.cnt), nf0.format(it.kc), `${pct(it.r)} / ${pct(it.meta)}`, "−"+nf2.format(it.brecha)+" pp"].forEach((v,j)=>r.append(el("td",{class:"n"+(j===3?" delta-neg":"")},v)));
+      // barra de kg faltantes
+      const cF = el("td",{style:"min-width:130px"});
+      const barF = el("div",{style:"display:flex;align-items:center;gap:6px"});
+      const b = el("div",{style:`height:10px;border-radius:0 3px 3px 0;background:${it.enCorte?"var(--aza-rojo)":"var(--axis)"};width:${Math.max(2,it.falt/maxF*72)}px`});
+      barF.append(b, el("span",{style:"font-variant-numeric:tabular-nums"}, nf0.format(Math.round(it.falt))));
+      cF.append(barF); r.append(cF);
+      // % acumulado con marca del 80 %
+      const cA = el("td",{style:"min-width:112px"});
+      const trackA = el("div",{style:"position:relative;height:8px;width:60px;background:var(--grid);border-radius:4px;display:inline-block;vertical-align:middle;margin-right:6px"});
+      trackA.append(el("div",{style:`position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--serie-proceso);width:${Math.min(100,it.acum)*0.6}px`}));
+      trackA.append(el("div",{style:`position:absolute;left:${PARETO_CORTE*0.6}px;top:-3px;bottom:-3px;width:2px;background:var(--aza-rojo)`}));
+      cA.append(trackA, el("span",{style:"font-variant-numeric:tabular-nums"}, nf1.format(it.acum)+" %"));
+      r.append(cA);
+      // recurrencia: un cuadro por semana previa
+      const cR = el("td");
+      previas.forEach(w => {
+        const itw = itemsPareto(porSem.get(w)).find(z=>z.k===it.k);
+        const q = el("span",{title:`${etiquetaSemana(w, LUNES[w])}: ${itw ? pct(itw.r)+" (meta "+pct(itw.meta)+")" : "sin producción"}`,
+          style:"display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:2px;vertical-align:middle;" +
+          (!itw ? "border:1px solid var(--grid)" : itw.falt>0 ? "background:var(--critical)" : "background:var(--good)")});
+        cR.append(q);
+      });
+      cR.append(el("span",{style:"margin-left:4px;color:var(--text-secondary)"}, `${it.prev}/${previas.length}`));
+      r.append(cR);
+      const [txt,col,ico] = PRIO[it.prio];
+      const pill = el("span",{style:`display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--text-primary)`});
+      const ic = el("span",{},ico); ic.style.color = col;
+      pill.append(ic, document.createTextNode(txt));
+      const cP = el("td"); cP.append(pill); r.append(cP);
+      r.addEventListener("pointermove", ev => mostrarTip(ev, it.k, [
+        ["Kg faltantes", kg(Math.round(it.falt))], ["Rend.", pct(it.r)], ["Meta", pct(it.meta)],
+        ["Órdenes", it.lista.map(o=>o.o).join(", ")] ]));
+      r.addEventListener("pointerleave", ocultarTip);
+      if (est.nivelPareto==="producto") { r.style.cursor="pointer"; r.addEventListener("click", () => { est.prod = est.prod===it.k ? "" : it.k; est.semana = sem; render(); }); }
+      tb.append(r);
+    });
+    t.append(tb);
+    const w = el("div",{class:"tabla-wrap",style:"max-height:none"}); w.append(t); cont.append(w);
+  }
+  if (sobre.length) {
+    const d = el("details"); d.append(el("summary",{},`${sobre.length} ítems cumplieron o superaron su meta esta semana`));
+    const ul = el("div",{style:"display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px;font-size:12.5px"});
+    sobre.forEach(it => ul.append(el("span",{}, `${est.nivelPareto==="producto" ? it.grupo+" "+it.p.desc : it.k}: ${pct(it.r)} (+${nf2.format(-it.brecha)} pp)`)));
+    d.append(ul); cont.append(d);
+  }
+
+  // recurrencia en el Pareto: últimas 8 semanas hasta la elegida
+  const ventana = sems.slice(Math.max(0, iSem-7), iSem+1);
+  const hist = new Map();
+  ventana.forEach(w => {
+    const its = itemsPareto(porSem.get(w)).filter(it=>it.falt>0).sort((a,b)=>b.falt-a.falt);
+    const tot = its.reduce((s,it)=>s+it.falt,0); let ac = 0;
+    its.forEach(it => { const en = ac/tot*100 < PARETO_CORTE; ac += it.falt;
+      if (!hist.has(it.k)) hist.set(it.k, { it, sem: new Map(), falt: 0, n: 0 });
+      const h = hist.get(it.k); h.sem.set(w, en ? "corte" : "bajo"); h.falt += it.falt; if (en) h.n++; });
+  });
+  const top = [...hist.values()].filter(h=>h.n>0).sort((a,b)=>b.n-a.n || b.falt-a.falt).slice(0,12);
+  if (top.length) {
+    const t = el("table"), tr = el("tr");
+    ["Ítem", ...ventana.map(w=>"S"+(+w.slice(-2))), "Semanas en el 80 %", "Kg faltantes (8 sem.)"].forEach((h,i)=>tr.append(el("th",{class:i>ventana.length?"n":""},h)));
+    const th = el("thead"); th.append(tr); t.append(th);
+    const tb = el("tbody");
+    top.forEach(h => {
+      const r = el("tr");
+      const c1 = el("td",{style:"white-space:normal;min-width:200px"});
+      const dot = el("i",{class:"k-dot",style:"margin-right:6px"}); dot.style.background = GCOLOR[h.it.grupo] || "var(--text-muted)";
+      c1.append(dot, document.createTextNode(est.nivelPareto==="producto" ? `${h.it.grupo} ${h.it.p.desc} · ${h.it.k.replace(/^.*?(A\d|SAE|ASTM|COM|A 36|A36)/,"$1")}` : h.it.k));
+      r.append(c1);
+      ventana.forEach(w => { const v = h.sem.get(w); const c = el("td",{style:"text-align:center"});
+        c.append(el("span",{style:"display:inline-block;width:14px;height:14px;border-radius:3px;"+(v==="corte"?"background:var(--aza-rojo)":v==="bajo"?"background:var(--div-mid);border:1px solid var(--axis)":"border:1px solid var(--grid)")}));
+        r.append(c); });
+      const nTxt = `${h.n} de ${ventana.length}`;
+      r.append(el("td",{class:"n"+(h.n>=3?" alerta":"")}, nTxt), el("td",{class:"n"}, nf0.format(Math.round(h.falt))));
+      tb.append(r);
+    });
+    t.append(tb);
+    const w = el("div",{class:"tabla-wrap",style:"max-height:none"}); w.append(t); rec.append(w);
+  }
+}
+
 // ---------- small multiples por grupo ----------
 function renderMultiples() {
   const cont = document.getElementById("multiples"); cont.replaceChildren();
@@ -1021,7 +1216,7 @@ function renderCorregir() {
 // ---------- render ----------
 function render() {
   syncFiltros();
-  renderKPIs(); renderCarta(); renderSemanal(); renderDiario(); renderMultiples(); renderVolumen(); renderGrupos(); renderRanking(); renderHeat(); renderCorregir();
+  renderKPIs(); renderCarta(); renderSemanal(); renderDiario(); renderPareto(); renderMultiples(); renderVolumen(); renderGrupos(); renderRanking(); renderHeat(); renderCorregir();
 }
 initFiltros();
 render();

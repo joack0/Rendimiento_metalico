@@ -138,7 +138,7 @@ def main():
     # rangos absolutos usados en todas las fórmulas
     R = {k: f"Ordenes!${c}$2:${c}${ult}" for k, c in
          {"fecha": "C", "anio": "D", "mes": "E", "grupo": "F", "prod": "G", "kp": "P", "kc": "Q",
-          "estado": "T", "metakc": "V", "anioiso": "W", "sem": "X"}.items()}
+          "estado": "T", "metakc": "V", "anioiso": "W", "sem": "X", "semkey": "Y"}.items()}
 
     # ------------------------------------------------ hojas de carta de control
     def hoja_carta(nombre, titulo_txt, periodos, tipo):
@@ -369,6 +369,74 @@ def main():
                 "Según la fecha de inicio de la orden. Órdenes válidas. Rend. = Σ kg producidos / Σ kg consumidos.",
                 ["Fecha", "Semana"], dias, fila_dia)
 
+    # ------------------------------------------------------ Pareto semanal
+    # kg faltantes = kg consumidos × (meta − rendimiento): cuánto metal faltó para cumplir la meta.
+    wpa = wb.create_sheet("Pareto semanal")
+    titulo(wpa, "Pareto semanal de kg faltantes vs meta (por producto)",
+           "Para cada semana, los productos bajo su meta ordenados por kg faltantes = kg consumidos × (meta − rend.). "
+           "Filtra la columna «Semana» para ver una semana. Los que suman el 80 % son los prioritarios.")
+    wpa["A3"] = ("Prioridad: «Actuar ya» = dentro del 80 % y brecha ≥ 2 pp o bajo meta en ≥ 2 de las 4 semanas previas; "
+                 "«Plan de mejora» = dentro del 80 %; «Monitorear» = fuera del 80 %. "
+                 "El orden y la columna de semanas previas se calculan al exportar.")
+    wpa["A3"].font = f_nota
+    cab = ["Semana", "Semana (fechas)", "#", "Grupo", "Producto", "Medidas", "Órdenes", "Kg producidos",
+           "Kg consumidos", "Rend. met.", "Meta", "Brecha (pp)", "Kg faltantes", "% del total semana",
+           "% acumulado", "Sem. previas bajo meta (de 4)", "Prioridad"]
+    encabezado(wpa, 5, cab)
+    val = [o for o in ordenes if o["kp"] <= o["kc"]]
+    por_sem = {}
+    for o in val:
+        k = semana_iso(o["ini"])[2]
+        por_sem.setdefault(k, {}).setdefault(o["p"], []).append(o)
+
+    def faltantes(lst):
+        kp = sum(o["kp"] for o in lst); kc = sum(o["kc"] for o in lst)
+        mk = sum((o["meta"] or 0) * o["kc"] for o in lst)
+        return kc * (mk / kc - kp / kc * 100) / 100 if kc else 0
+
+    claves = sorted(por_sem)
+    bajo_meta = {k: {p for p, l in por_sem[k].items() if faltantes(l) > 0} for k in claves}
+    r = 6
+    for i in range(len(claves) - 1, -1, -1):  # semana más reciente primero
+        k = claves[i]
+        y, w = int(k[:4]), int(k[-2:])
+        previas = claves[max(0, i - 4):i]
+        items = sorted(((p, faltantes(l)) for p, l in por_sem[k].items()), key=lambda t: -t[1])
+        items = [t for t in items if t[1] > 0]
+        r0 = r
+        for n, (pn, _) in enumerate(items, 1):
+            c = f'{R["semkey"]},$A{r},{R["prod"]},$E{r},{R["estado"]},"Válida"'
+            vals = [k, etiqueta_semana(y, w), n, productos[pn]["grupo"], pn, productos[pn]["desc"],
+                    f"=COUNTIFS({c})", f'=SUMIFS({R["kp"]},{c})', f'=SUMIFS({R["kc"]},{c})',
+                    f'=IFERROR(H{r}/I{r},"")', f'=IFERROR(SUMIFS({R["metakc"]},{c})/I{r},"")',
+                    f'=IFERROR((K{r}-J{r})*100,"")', f'=IFERROR(I{r}*(K{r}-J{r}),0)',
+                    f"=IFERROR(M{r}/SUM(M${r0}:M${r0 + len(items) - 1}),0)",
+                    f"=SUM(N${r0}:N{r})",
+                    sum(1 for q in previas if pn in bajo_meta[q]),
+                    f'=IF(O{r}-N{r}<0.8,IF(OR(L{r}>=2,P{r}>=2),"Actuar ya","Plan de mejora"),"Monitorear")']
+            for j, v in enumerate(vals, 1):
+                cc = wpa.cell(r, j, v)
+                cc.font = f_base
+                cc.border = borde
+            for j in (8, 9, 13):
+                wpa.cell(r, j).number_format = KG
+            for j in (10, 11, 14, 15):
+                wpa.cell(r, j).number_format = PCT
+            wpa.cell(r, 12).number_format = '0.00" pp"'
+            r += 1
+    up = r - 1
+    t4 = Table(displayName="Pareto", ref=f"A5:Q{up}")
+    t4.tableStyleInfo = TableStyleInfo(name="TableStyleLight1", showRowStripes=False)
+    wpa.add_table(t4)
+    wpa.conditional_formatting.add(f"Q6:Q{up}", CellIsRule(operator="equal", formula=['"Actuar ya"'], fill=fill_alerta,
+                                                           font=Font(name=F, bold=True, color="D03B3B")))
+    wpa.conditional_formatting.add(f"Q6:Q{up}", CellIsRule(operator="equal", formula=['"Plan de mejora"'],
+                                                           fill=PatternFill("solid", fgColor="FCE5D8"),
+                                                           font=Font(name=F, bold=True, color="A3441C")))
+    wpa.conditional_formatting.add(f"O6:O{up}", FormulaRule(formula=["O6-N6<0.8"], font=Font(name=F, bold=True)))
+    anchos(wpa, [10, 22, 5, 13, 42, 22, 8, 13, 13, 10, 10, 11, 12, 11, 11, 13, 15])
+    wpa.freeze_panes = "C6"
+
     # ------------------------------------------------------ Ranking productos
     wr = wb.create_sheet("Ranking productos")
     titulo(wr, "Ranking de productos (de mayor a menor kg producidos)",
@@ -477,6 +545,7 @@ def main():
         "• Carta mensual / Carta semanal / Carta diaria: carta de control I-MR con gráfico y el % de cada punto. Las celdas amarillas filtran por grupo o producto.",
         "• Grupo x semana: rendimiento de cada grupo por semana ISO (lunes a domingo), con meta y kg.",
         "• Grupo x día: rendimiento de cada grupo por día, con meta y kg.",
+        "• Pareto semanal: por semana, productos bajo meta ordenados por kg faltantes, con % acumulado y prioridad.",
         "• Grupo x mes: rendimiento, kg producidos y meta por grupo y mes.",
         "• Ranking productos: productos de mayor a menor kg producidos.",
         "• A corregir: órdenes sobre 100 %, excluidas de los cálculos.",
