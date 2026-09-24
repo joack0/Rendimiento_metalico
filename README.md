@@ -38,3 +38,16 @@ Ordenes: si se corrige una orden ahí, todo se recalcula.
 - **Actuar ya:** está dentro del 80 % y tiene una brecha ≥ 2 pp o estuvo bajo meta en ≥ 2 de las 4 semanas previas.
 - **Plan de mejora:** está dentro del 80 %, pero no cumple lo anterior.
 - **Monitorear:** está fuera del 80 %.
+
+## Plantilla de control
+
+```bash
+python3 scripts/crear_plantilla.py
+```
+
+Genera `plantilla/Plantilla_control_rendimiento.xlsx` para el registro diario por orden, con el formato del análisis 2010
+(T1, T2, T3, T4, fuera de medida, corto T4, cobles, oxidación, pérdidas SAP, delta y Hecho / Causa / Acción). Hojas:
+Inicio, Registro, Resumen mensual, Carta semanal, Pareto, Plan de acción, Guía de control y Parámetros. Solo se escriben
+las celdas amarillas; el resto son fórmulas.
+
+La guía para controlar el rendimiento está en `docs/guia_control_rendimiento.md`.
