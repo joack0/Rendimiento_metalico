@@ -310,44 +310,64 @@ def main():
     anchos(wg, [16] + [11] * (len(meses) + 1))
     wg.freeze_panes = "B6"
 
-    # ------------------------------------------------------ Grupo x semana
-    wsg = wb.create_sheet("Grupo x semana")
-    titulo(wsg, "Rendimiento metálico por grupo y semana ISO",
-           "Semana ISO: lunes a domingo, según la fecha de inicio de la orden. Órdenes válidas. "
-           "Rend. = Σ kg producidos / Σ kg consumidos.")
-    gcols = GRUPOS + ["Total"]
-    encabezado(wsg, 4, ["Semana", "Año ISO", "N° semana"] + [f"Rend. {g}" for g in gcols]
-               + ["Meta total", "vs meta (pp)", "Kg producidos", "Kg consumidos", "Órdenes válidas"])
-    nc = 3 + len(gcols)
-    for i, (y, w) in enumerate(semanas):
-        r = 5 + i
+    # ------------------------------------------- Grupo x semana / Grupo x día
+    def hoja_grupos(nombre, titulo_txt, sub, cab_bc, periodos, fila_fn):
+        """Filas = períodos; columnas = rendimiento por grupo + total, meta, kg y órdenes."""
+        wsg = wb.create_sheet(nombre)
+        titulo(wsg, titulo_txt, sub)
+        gcols = GRUPOS + ["Total"]
+        encabezado(wsg, 4, ["Período", *cab_bc] + [f"Rend. {g}" for g in gcols]
+                   + ["Meta total", "vs meta (pp)", "Kg producidos", "Kg consumidos", "Órdenes válidas"])
+        nc = 3 + len(gcols)
+        for i, per in enumerate(periodos):
+            r = 5 + i
+            cond = fila_fn(wsg, r, per) + f',{R["estado"]},"Válida"'
+            for j, g in enumerate(gcols):
+                crit = '"*"' if g == "Total" else f'"{g}"'
+                c = wsg.cell(r, 4 + j, f'=IFERROR(SUMIFS({R["kp"]},{cond},{R["grupo"]},{crit})/'
+                                        f'SUMIFS({R["kc"]},{cond},{R["grupo"]},{crit}),"")')
+                c.number_format = PCT
+            tot = get_column_letter(nc)
+            wsg.cell(r, nc + 1, f'=IFERROR(SUMIFS({R["metakc"]},{cond})/SUMIFS({R["kc"]},{cond}),"")').number_format = PCT
+            wsg.cell(r, nc + 2, f'=IFERROR(({tot}{r}-{get_column_letter(nc + 1)}{r})*100,"")').number_format = PP
+            wsg.cell(r, nc + 3, f'=SUMIFS({R["kp"]},{cond})').number_format = KG
+            wsg.cell(r, nc + 4, f'=SUMIFS({R["kc"]},{cond})').number_format = KG
+            wsg.cell(r, nc + 5, f'=COUNTIFS({cond})')
+            for j in range(1, nc + 6):
+                wsg.cell(r, j).font = f_bold if j == nc else f_base
+                wsg.cell(r, j).border = borde
+        us = 4 + len(periodos)
+        wsg.conditional_formatting.add(f"D5:{get_column_letter(nc)}{us}", ColorScaleRule(
+            start_type="num", start_value=0.90, start_color="E34948", mid_type="num", mid_value=0.945,
+            mid_color="F0EFEC", end_type="num", end_value=0.97, end_color="2A78D6"))
+        wsg.conditional_formatting.add(f"{get_column_letter(nc + 2)}5:{get_column_letter(nc + 2)}{us}",
+                                       CellIsRule(operator="lessThan", formula=["0"], font=Font(name=F, color="D03B3B")))
+        wsg.cell(us + 2, 1, "Escala de color: rojo ≤ 90 %, gris 94,5 %, azul ≥ 97 %. "
+                            "Celda vacía = el grupo no produjo en ese período.").font = f_nota
+        anchos(wsg, [20, 11, 9] + [11] * len(gcols) + [10, 11, 14, 14, 10])
+        wsg.freeze_panes = "D5"
+
+    def fila_semana(wsg, r, per):
+        y, w = per
         wsg.cell(r, 1, etiqueta_semana(y, w))
         wsg.cell(r, 2, y)
         wsg.cell(r, 3, w)
-        cond = f'{R["anioiso"]},$B{r},{R["sem"]},$C{r},{R["estado"]},"Válida"'
-        for j, g in enumerate(gcols):
-            crit = '"*"' if g == "Total" else f'"{g}"'
-            c = wsg.cell(r, 4 + j, f'=IFERROR(SUMIFS({R["kp"]},{cond},{R["grupo"]},{crit})/'
-                                    f'SUMIFS({R["kc"]},{cond},{R["grupo"]},{crit}),"")')
-            c.number_format = PCT
-        tot = get_column_letter(nc)
-        wsg.cell(r, nc + 1, f'=IFERROR(SUMIFS({R["metakc"]},{cond})/SUMIFS({R["kc"]},{cond}),"")').number_format = PCT
-        wsg.cell(r, nc + 2, f'=IFERROR(({tot}{r}-{get_column_letter(nc + 1)}{r})*100,"")').number_format = PP
-        wsg.cell(r, nc + 3, f'=SUMIFS({R["kp"]},{cond})').number_format = KG
-        wsg.cell(r, nc + 4, f'=SUMIFS({R["kc"]},{cond})').number_format = KG
-        wsg.cell(r, nc + 5, f'=COUNTIFS({cond})')
-        for j in range(1, nc + 6):
-            wsg.cell(r, j).font = f_bold if j == nc else f_base
-            wsg.cell(r, j).border = borde
-    us = 4 + len(semanas)
-    wsg.conditional_formatting.add(f"D5:{get_column_letter(nc)}{us}", ColorScaleRule(
-        start_type="num", start_value=0.90, start_color="E34948", mid_type="num", mid_value=0.945,
-        mid_color="F0EFEC", end_type="num", end_value=0.97, end_color="2A78D6"))
-    wsg.conditional_formatting.add(f"{get_column_letter(nc + 2)}5:{get_column_letter(nc + 2)}{us}",
-                                   CellIsRule(operator="lessThan", formula=["0"], font=Font(name=F, color="D03B3B")))
-    wsg.cell(us + 2, 1, "Escala de color: rojo ≤ 90 %, gris 94,5 %, azul ≥ 97 %. Celda vacía = el grupo no produjo esa semana.").font = f_nota
-    anchos(wsg, [20, 8, 9] + [11] * len(gcols) + [10, 11, 14, 14, 10])
-    wsg.freeze_panes = "D5"
+        return f'{R["anioiso"]},$B{r},{R["sem"]},$C{r}'
+
+    DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+
+    def fila_dia(wsg, r, per):
+        wsg.cell(r, 1, f"{DIAS[per.weekday()]} {per.day} {MESES[per.month - 1].lower()} {per.year}")
+        wsg.cell(r, 2, per).number_format = "dd-mm-yyyy"
+        wsg.cell(r, 3, f"S{per.isocalendar()[1]:02d}")
+        return f'{R["fecha"]},$B{r}'
+
+    hoja_grupos("Grupo x semana", "Rendimiento metálico por grupo y semana ISO",
+                "Semana ISO: lunes a domingo, según la fecha de inicio de la orden. Órdenes válidas. "
+                "Rend. = Σ kg producidos / Σ kg consumidos.", ["Año ISO", "N° semana"], semanas, fila_semana)
+    hoja_grupos("Grupo x día", "Rendimiento metálico por grupo y día",
+                "Según la fecha de inicio de la orden. Órdenes válidas. Rend. = Σ kg producidos / Σ kg consumidos.",
+                ["Fecha", "Semana"], dias, fila_dia)
 
     # ------------------------------------------------------ Ranking productos
     wr = wb.create_sheet("Ranking productos")
@@ -456,6 +476,7 @@ def main():
         "• Ordenes: todas las órdenes del CSV, con grupo, medidas (mm), largo (m), rendimiento y estado. Base de todo el libro.",
         "• Carta mensual / Carta semanal / Carta diaria: carta de control I-MR con gráfico y el % de cada punto. Las celdas amarillas filtran por grupo o producto.",
         "• Grupo x semana: rendimiento de cada grupo por semana ISO (lunes a domingo), con meta y kg.",
+        "• Grupo x día: rendimiento de cada grupo por día, con meta y kg.",
         "• Grupo x mes: rendimiento, kg producidos y meta por grupo y mes.",
         "• Ranking productos: productos de mayor a menor kg producidos.",
         "• A corregir: órdenes sobre 100 %, excluidas de los cálculos.",

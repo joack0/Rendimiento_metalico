@@ -16,7 +16,7 @@ python3 scripts/exportar_excel.py
 ```
 
 Genera `dashboard/Rendimiento_metalico.xlsx` con las hojas Resumen, Ordenes (base completa), Carta mensual,
-Carta semanal, Carta diaria, Grupo x mes, Grupo x semana, Ranking productos, A corregir y Productos. Los resúmenes son fórmulas sobre la hoja
+Carta semanal, Carta diaria, Grupo x mes, Grupo x semana, Grupo x día, Ranking productos, A corregir y Productos. Los resúmenes son fórmulas sobre la hoja
 Ordenes: si se corrige una orden ahí, todo se recalcula.
 
 ## Reglas

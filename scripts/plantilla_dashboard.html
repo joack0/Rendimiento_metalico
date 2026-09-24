@@ -244,8 +244,16 @@ details summary { cursor: pointer; color: var(--text-secondary); font-size: 12.5
       </div>
     </div>
     <div class="leyenda" id="sem-ley"></div>
-    <div id="semanal" style="overflow-x:auto"></div>
+    <div id="semanal"></div>
     <details><summary>Ver tabla semanal</summary><div class="tabla-wrap" id="sem-tabla" style="margin-top:8px"></div></details>
+  </section>
+
+  <section class="card" id="diario-card">
+    <h2>Análisis diario por grupo</h2>
+    <p class="desc"><span id="dia-desc"></span> Cada celda es el rendimiento del grupo ese día, comparado con su meta.</p>
+    <div class="leyenda" id="dia-ley"></div>
+    <div id="diario"></div>
+    <details><summary>Ver tabla diaria</summary><div class="tabla-wrap" id="dia-tabla" style="margin-top:8px"></div></details>
   </section>
 
   <section class="card">
@@ -647,81 +655,117 @@ function renderTablaCarta(pts, L) {
   t.append(tb); cont.append(t);
 }
 
-// ---------- análisis semanal ----------
-function renderSemanal() {
-  const cont = document.getElementById("semanal"); cont.replaceChildren();
-  const ley = document.getElementById("sem-ley"); ley.replaceChildren();
-  const tabla = document.getElementById("sem-tabla"); tabla.replaceChildren();
+// ---------- mapas grupo × período (semanal y diario) ----------
+// Filas = grupos + total; columnas = períodos; color = rendimiento vs meta.
+function mapaGrupos({ cont, ley, tabla, v, clave, periodos, cab1, cab2, titulo, tablaEtq, marcado, alClic, marcaLey }) {
+  cont.replaceChildren(); ley.replaceChildren(); tabla.replaceChildren();
   const cs = getComputedStyle(document.documentElement);
   const cNeg = cs.getPropertyValue("--div-neg").trim(), cMid = cs.getPropertyValue("--div-mid").trim(), cPos = cs.getPropertyValue("--div-pos").trim();
   const LIM = 4;
   const color = d => d>=0 ? mezcla(cMid,cPos,Math.min(1,d/LIM)) : mezcla(cMid,cNeg,Math.min(1,-d/LIM));
   [-4,-2,-1,0,1,2,4].forEach(d => { const sp = el("span"); const k = el("i",{class:"k-rect"}); k.style.background=color(d); sp.append(k, document.createTextNode((d>0?"+":"")+d+(Math.abs(d)===4?"+":"")+" pp vs meta")); ley.append(sp); });
-  const sp = el("span"); const k = el("i",{class:"k-rect"}); k.style.outline="2px solid var(--text-primary)"; sp.append(k, document.createTextNode("Semana filtrada")); ley.append(sp);
+  if (marcaLey) { const sp = el("span"); const k = el("i",{class:"k-rect"}); k.style.outline="2px solid var(--text-primary)"; sp.append(k, document.createTextNode(marcaLey)); ley.append(sp); }
+  if (!v.length) { cont.append(el("div",{class:"vacio"},"Sin datos para los filtros seleccionados.")); return; }
 
-  // no aplica el filtro de semana para poder ver y elegir todas
-  const v = filtrar(VALIDAS, {sinSemana:true});
-  if (!v.length) { cont.append(el("div",{class:"vacio"},"Sin datos.")); return; }
-  const sems = [...new Set(v.map(x=>x.sem))].sort();
   const porG = agrupar(v, x=>x.grupo);
-  const filas = GRUPOS.filter(g=>porG.has(g)).map(g => ({ g, m: agrupar(porG.get(g), x=>x.sem) }));
-  filas.push({ g: "Total", m: agrupar(v, x=>x.sem) });
+  const filas = GRUPOS.filter(g=>porG.has(g)).map(g => ({ g, m: agrupar(porG.get(g), clave) }));
+  filas.push({ g: "Total", m: agrupar(v, clave) });
 
+  // nombres de grupo fijos a la izquierda; las celdas se desplazan en horizontal
   const W0 = anchoDe(cont), colNom = 104;
-  const cw = Math.max(44, Math.min(56, (W0 - colNom - 8) / sems.length)), ch = 26; // ≥ 44 px para que quepa el %
-  const W = colNom + cw*sems.length + 4, H = 34 + filas.length*ch + 8;
-  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Rendimiento semanal por grupo"});
-  sems.forEach((k,j) => {
-    const x0 = colNom + cw*j;
-    const t = s("text",{x:x0+cw/2,y:12,"text-anchor":"middle"}, "S"+(+k.slice(-2)));
-    if (k===est.semana) { t.style.fill="var(--text-primary)"; t.style.fontWeight="700"; }
+  const cw = Math.max(44, Math.min(56, (W0 - colNom - 8) / periodos.length)), ch = 26; // ≥ 44 px para que quepa el %
+  const W = cw*periodos.length + 4, H = 34 + filas.length*ch + 8;
+  const izq = s("svg",{width:colNom,height:H,viewBox:`0 0 ${colNom} ${H}`,"aria-hidden":"true"});
+  const svg = s("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":titulo});
+  periodos.forEach((k,j) => {
+    const x0 = cw*j;
+    const t = s("text",{x:x0+cw/2,y:12,"text-anchor":"middle"}, cab1(k));
+    if (k===marcado) { t.style.fill="var(--text-primary)"; t.style.fontWeight="700"; }
     svg.append(t);
-    const [y,m,d] = LUNES[k].split("-").map(Number);
-    if (j===0 || (d<=7)) svg.append(s("text",{x:x0+cw/2,y:25,"text-anchor":"middle"}, MESES[m-1]));
+    const c2 = cab2(k, j); if (c2) svg.append(s("text",{x:x0+cw/2,y:25,"text-anchor":"middle"}, c2));
   });
   filas.forEach((f,i) => {
     const yy = 34 + i*ch + (f.g==="Total" ? 6 : 0);
     const t = s("text",{x:0,y:yy+ch/2+4}, f.g); t.style.fill="var(--text-primary)"; t.style.fontSize="12px"; if (f.g==="Total") t.style.fontWeight="700";
-    svg.append(t);
-    if (f.g!=="Total") { const kk = s("rect",{x:colNom-14,y:yy+ch/2-4,width:8,height:8,rx:2,fill:GCOLOR[f.g]}); svg.append(kk); }
-    sems.forEach((key,j) => {
-      const x0 = colNom + cw*j;
+    izq.append(t);
+    if (f.g!=="Total") izq.append(s("rect",{x:colNom-14,y:yy+ch/2-4,width:8,height:8,rx:2,fill:GCOLOR[f.g]}));
+    periodos.forEach((key,j) => {
+      const x0 = cw*j;
       if (!f.m.has(key)) { svg.append(s("rect",{x:x0+1,y:yy+1,width:cw-2,height:ch-2,rx:3,fill:"none",stroke:"var(--grid)"})); return; }
       const a = agregar(f.m.get(key)); const d = a.meta!=null ? a.r - a.meta : 0;
       const fill = color(d);
-      const rc = s("rect",{x:x0+1,y:yy+1,width:cw-2,height:ch-2,rx:3,fill,style:"cursor:pointer"});
-      if (key===est.semana) { rc.setAttribute("stroke","var(--text-primary)"); rc.setAttribute("stroke-width","2"); }
+      const rc = s("rect",{x:x0+1,y:yy+1,width:cw-2,height:ch-2,rx:3,fill,style:alClic?"cursor:pointer":null});
+      if (key===marcado) { rc.setAttribute("stroke","var(--text-primary)"); rc.setAttribute("stroke-width","2"); }
       svg.append(rc);
-      if (cw >= 40) {
-        const c3 = [1,3,5].map(q=>parseInt(fill.slice(q,q+2),16)/255), lum = 0.2126*c3[0]+0.7152*c3[1]+0.0722*c3[2];
-        const tx = s("text",{x:x0+cw/2,y:yy+ch/2+4,"text-anchor":"middle"}, nf1.format(a.r));
-        tx.style.fill = lum>0.45?"#0b0b0b":"#ffffff"; tx.style.fontSize="10.5px"; tx.style.pointerEvents="none";
-        if (f.g==="Total") tx.style.fontWeight="700";
-        svg.append(tx);
-      }
-      rc.addEventListener("pointermove", ev => mostrarTip(ev, `${f.g} · ${etiquetaSemana(key, LUNES[key])} ${key.slice(0,4)}`, [
+      const c3 = [1,3,5].map(q=>parseInt(fill.slice(q,q+2),16)/255), lum = 0.2126*c3[0]+0.7152*c3[1]+0.0722*c3[2];
+      const tx = s("text",{x:x0+cw/2,y:yy+ch/2+4,"text-anchor":"middle"}, nf1.format(a.r));
+      tx.style.fill = lum>0.45?"#0b0b0b":"#ffffff"; tx.style.fontSize="10.5px"; tx.style.pointerEvents="none";
+      if (f.g==="Total") tx.style.fontWeight="700";
+      svg.append(tx);
+      rc.addEventListener("pointermove", ev => mostrarTip(ev, `${f.g} · ${tablaEtq(key)}`, [
         ["Rend. met.", pct(a.r), f.g==="Total" ? "var(--serie-proceso)" : GCOLOR[f.g]], ["Meta", pct(a.meta)],
         ["vs meta", (d>=0?"+":"")+nf2.format(d)+" pp"], ["Kg producidos", kg(a.kp)], ["Órdenes", nf0.format(a.cnt)] ]));
       rc.addEventListener("pointerleave", ocultarTip);
-      rc.addEventListener("click", () => { est.semana = est.semana===key ? "" : key; if (est.semana && est.vista==="sem") est.vista = "dia"; ocultarTip(); render(); });
+      if (alClic) rc.addEventListener("click", () => { ocultarTip(); alClic(key); });
     });
   });
-  cont.append(svg);
-  if (cont.scrollWidth > cont.clientWidth) cont.scrollLeft = cont.scrollWidth; // semanas más recientes a la vista
+  const scroller = el("div",{style:"overflow-x:auto;flex:1;min-width:0"});
+  scroller.append(svg);
+  const fila = el("div",{style:"display:flex;align-items:flex-start"});
+  fila.append(izq, scroller);
+  cont.append(fila);
+  if (scroller.scrollWidth > scroller.clientWidth) scroller.scrollLeft = scroller.scrollWidth; // lo más reciente a la vista
 
-  // tabla semanal (total del filtro)
+  // tabla (total del filtro + columna por grupo)
+  const gs = filas.filter(f=>f.g!=="Total").map(f=>f.g);
   const t = el("table"), tr = el("tr");
-  ["Semana","Desde","Órdenes","Kg producidos","Kg consumidos","Rend. met.","Meta","vs meta"].forEach((h,i)=>tr.append(el("th",{class:i>1?"n":""},h)));
+  ["Período","Órdenes","Kg producidos","Kg consumidos","Rend. met.","Meta","vs meta", ...gs].forEach((h,i)=>tr.append(el("th",{class:i?"n":""},h)));
   const th = el("thead"); th.append(tr); t.append(th);
   const tb = el("tbody"); const tot = filas[filas.length-1].m;
-  sems.forEach(key => {
+  periodos.forEach(key => {
+    if (!tot.has(key)) return;
     const a = agregar(tot.get(key)); const d = a.meta!=null ? a.r-a.meta : null;
     const r = el("tr");
-    [ "S"+(+key.slice(-2))+" "+key.slice(0,4), fecha(LUNES[key]), nf0.format(a.cnt), nf0.format(a.kp), nf0.format(a.kc), pct(a.r), pct(a.meta), d==null?"—":(d>=0?"▲ +":"▼ ")+nf2.format(d)+" pp" ]
-      .forEach((val,i)=>r.append(el("td",{class:(i>1?"n":"")+(i===7&&d!=null?(d>=0?" delta-pos":" delta-neg"):"")},val)));
+    [ tablaEtq(key), nf0.format(a.cnt), nf0.format(a.kp), nf0.format(a.kc), pct(a.r), pct(a.meta), d==null?"—":(d>=0?"▲ +":"▼ ")+nf2.format(d)+" pp",
+      ...filas.filter(f=>f.g!=="Total").map(f => f.m.has(key) ? pct(agregar(f.m.get(key)).r) : "—") ]
+      .forEach((val,i)=>r.append(el("td",{class:(i?"n":"")+(i===6&&d!=null?(d>=0?" delta-pos":" delta-neg"):"")},val)));
     tb.append(r);
   });
   t.append(tb); tabla.append(t);
+}
+
+const DIAS_SEM = ["D","L","M","M","J","V","S"];
+function renderSemanal() {
+  // no aplica el filtro de semana para poder ver y elegir todas
+  const v = filtrar(VALIDAS, {sinSemana:true});
+  mapaGrupos({
+    cont: document.getElementById("semanal"), ley: document.getElementById("sem-ley"), tabla: document.getElementById("sem-tabla"),
+    v, clave: x=>x.sem, periodos: [...new Set(v.map(x=>x.sem))].sort(),
+    cab1: k => "S"+(+k.slice(-2)),
+    cab2: (k, j) => { const [y,m,d] = LUNES[k].split("-").map(Number); return (j===0 || d<=7) ? MESES[m-1] : ""; },
+    titulo: "Rendimiento semanal por grupo",
+    tablaEtq: k => `${etiquetaSemana(k, LUNES[k])} ${k.slice(0,4)}`,
+    marcado: est.semana, marcaLey: "Semana filtrada",
+    alClic: key => { est.semana = est.semana===key ? "" : key; if (est.semana && est.vista==="sem") est.vista = "dia"; render(); },
+  });
+}
+function renderDiario() {
+  const v = filtrar(VALIDAS);
+  mapaGrupos({
+    cont: document.getElementById("diario"), ley: document.getElementById("dia-ley"), tabla: document.getElementById("dia-tabla"),
+    v, clave: x=>x.d, periodos: [...new Set(v.map(x=>x.d))].sort(),
+    cab1: k => String(+k.slice(8,10)),
+    cab2: (k, j, ) => { const [y,m,d] = k.split("-").map(Number); const dow = new Date(Date.UTC(y,m-1,d)).getUTCDay();
+      return (j===0 || d===1) ? `${DIAS_SEM[dow]} ${MESES[m-1]}` : DIAS_SEM[dow]; },
+    titulo: "Rendimiento diario por grupo",
+    tablaEtq: k => { const [y,m,d] = k.split("-").map(Number); const dow = new Date(Date.UTC(y,m-1,d)).getUTCDay();
+      return `${["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"][dow]} ${fecha(k)}`; },
+    marcado: null,
+    alClic: key => { const w = ORD.find(x=>x.d===key).sem; if (est.semana !== w) { est.semana = w; render(); document.getElementById("diario-card").scrollIntoView({block:"nearest"}); } },
+  });
+  document.getElementById("dia-desc").textContent = est.semana
+    ? `Mostrando ${etiquetaSemana(est.semana, LUNES[est.semana])}. Quita el filtro de semana para ver todos los días.`
+    : "Todos los días del período (desliza hacia la izquierda para ver los anteriores). Haz clic en un día para filtrar su semana.";
 }
 
 // ---------- small multiples por grupo ----------
@@ -977,7 +1021,7 @@ function renderCorregir() {
 // ---------- render ----------
 function render() {
   syncFiltros();
-  renderKPIs(); renderCarta(); renderSemanal(); renderMultiples(); renderVolumen(); renderGrupos(); renderRanking(); renderHeat(); renderCorregir();
+  renderKPIs(); renderCarta(); renderSemanal(); renderDiario(); renderMultiples(); renderVolumen(); renderGrupos(); renderRanking(); renderHeat(); renderCorregir();
 }
 initFiltros();
 render();
