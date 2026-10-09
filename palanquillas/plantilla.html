@@ -1,0 +1,441 @@
+<title>Palanquillas vs Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: banda de carga + parámetros arriba, fila de indicadores, luego pestañas con tablas de trabajo a todo el ancho */
+:root {
+  --bg: #eef1f4;
+  --panel: #ffffff;
+  --panel-2: #f6f8fa;
+  --line: #d5dce3;
+  --fg: #18222d;
+  --muted: #5a6876;
+  --accent: #1f5f8b;
+  --accent-soft: #dbe8f2;
+  --hot: #c2410c;
+  --ok: #1d7a46;   --ok-bg: #dcf1e4;
+  --warn: #946200; --warn-bg: #fbefcc;
+  --bad: #b42318;  --bad-bg: #fbe2df;
+  --bar-bg: #e3e8ee;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11171d; --panel: #18212a; --panel-2: #1d2731; --line: #2c3a47; --fg: #e4eaf0; --muted: #96a5b3;
+    --accent: #6fb0e0; --accent-soft: #1d3446; --hot: #f08a4b;
+    --ok: #5fcf8e; --ok-bg: #173527; --warn: #e8b84a; --warn-bg: #3a2f12; --bad: #f2877c; --bad-bg: #42201d; --bar-bg: #26323d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11171d; --panel: #18212a; --panel-2: #1d2731; --line: #2c3a47; --fg: #e4eaf0; --muted: #96a5b3;
+  --accent: #6fb0e0; --accent-soft: #1d3446; --hot: #f08a4b;
+  --ok: #5fcf8e; --ok-bg: #173527; --warn: #e8b84a; --warn-bg: #3a2f12; --bad: #f2877c; --bad-bg: #42201d; --bar-bg: #26323d;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 18px; }
+.wrap > * { min-width: 0; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; }
+h1 { font-size: 28px; font-weight: 700; letter-spacing: .01em; }
+h2 { font-size: 18px; font-weight: 600; }
+.num, td.n, th.n { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--f-mono); font-size: 12px; }
+.muted { color: var(--muted); }
+.eyebrow { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .08em; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+
+header.top { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: flex-end; justify-content: space-between; }
+header.top p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+
+/* carga */
+.load { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 12px; }
+@media (max-width: 980px) { .load { grid-template-columns: 1fr 1fr; } .params { grid-column: 1 / -1; } }
+@media (max-width: 620px) { .load { grid-template-columns: 1fr; } }
+.drop { position: relative; background: var(--panel); border: 1.5px dashed var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 6px; min-width: 0; cursor: pointer; transition: border-color .15s, background .15s; }
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.drop .fname { font-weight: 600; overflow-wrap: anywhere; }
+.drop .meta { font-size: 12.5px; color: var(--muted); }
+.drop .act { font-size: 12.5px; color: var(--accent); font-weight: 600; }
+.drop.err { border-color: var(--bad); }
+.drop .errmsg { color: var(--bad); font-size: 12.5px; }
+
+.params { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; min-width: 0; }
+.params label { display: grid; gap: 3px; font-size: 12.5px; color: var(--muted); min-width: 0; }
+.params input[type=datetime-local], .params select, .params input[type=number] { font: inherit; font-size: 13px; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; width: 100%; min-width: 0; }
+.params .chk { display: flex; gap: 7px; align-items: center; color: var(--fg); font-size: 13px; }
+.params .hint { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin: 0; }
+
+/* KPIs */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 860px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; align-content: start; }
+.kpi .v { font-family: var(--f-display); font-size: 30px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi .v small { font-size: 15px; font-weight: 500; color: var(--muted); margin-left: 3px; }
+.kpi .s { font-size: 12.5px; color: var(--muted); }
+.kpi.bad { border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.kpi.bad .v { color: var(--bad); }
+.kpi .meter { height: 6px; border-radius: 3px; background: var(--bar-bg); overflow: hidden; margin-top: 6px; }
+.kpi .meter i { display: block; height: 100%; background: var(--ok); }
+
+.alert { background: var(--bad-bg); color: var(--fg); border-left: 4px solid var(--bad); border-radius: 6px; padding: 10px 14px; font-size: 13.5px; }
+.alert b { color: var(--bad); }
+
+/* tabs */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); align-items: flex-end; }
+.tabs [role=tab] { font: 600 14px var(--f-display); letter-spacing: .02em; background: none; border: 0; border-bottom: 2.5px solid transparent; color: var(--muted); padding: 8px 12px; cursor: pointer; }
+.tabs [role=tab][aria-selected=true] { color: var(--fg); border-bottom-color: var(--accent); }
+.tabs [role=tab]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tabs .cnt { font-family: var(--f-mono); font-size: 11px; font-weight: 500; color: var(--muted); margin-left: 4px; }
+.tabs .sp { flex: 1; }
+.tool { display: flex; gap: 8px; align-items: center; padding-bottom: 6px; flex-wrap: wrap; }
+.btn { font: 500 12.5px var(--f-body); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--fg); }
+
+.tablebox { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { font: 600 11.5px var(--f-display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); background: var(--panel-2); white-space: nowrap; position: sticky; top: 0; }
+td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.n, th.n { text-align: right; white-space: nowrap; }
+tr.main { cursor: pointer; }
+tr.main:hover td { background: var(--panel-2); }
+tr.main:focus-visible td { outline: none; background: var(--accent-soft); }
+tr.sub td { background: var(--panel-2); padding: 12px 14px 16px; }
+tbody tr:last-child td { border-bottom: 0; }
+td .code { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); }
+td .pal { font-weight: 600; white-space: nowrap; }
+.chip { display: inline-block; font: 600 11px var(--f-display); letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.ok { background: var(--ok-bg); color: var(--ok); }
+.chip.justo { background: var(--warn-bg); color: var(--warn); }
+.chip.falta, .chip.parcial { background: var(--bad-bg); color: var(--bad); }
+.chip.off { background: var(--bar-bg); color: var(--muted); }
+.neg { color: var(--bad); font-weight: 600; }
+.pos { color: var(--ok); }
+
+.cov { width: 150px; min-width: 120px; }
+.covbar { position: relative; height: 10px; background: var(--bar-bg); border-radius: 5px; overflow: hidden; }
+.covbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); border-radius: 5px 0 0 5px; }
+.covbar.falta i { background: var(--bad); }
+.covbar.justo i { background: var(--warn); }
+.covlbl { font-size: 11.5px; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+.detail { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 860px) { .detail { grid-template-columns: 1fr; } }
+.detail h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+.detail table { font-size: 12.5px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.detail td, .detail th { padding: 5px 8px; }
+.detail .scroll { overflow-x: auto; }
+.alt { display: grid; gap: 6px; }
+.alt div { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 12.5px; }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+.seqrow.antes td, .seqrow.hecha td { color: var(--muted); }
+.sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+
+footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
+footer p { margin: 0; max-width: 95ch; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Laminación · Materia prima</div>
+      <h1>Palanquillas vs Stock</h1>
+      <p>Carga el programa de laminación y el reporte de stock. La herramienta suma las palanquillas que pide el programa por código, calidad y largo, las compara con el stock y marca desde qué orden falta material.</p>
+    </div>
+  </header>
+
+  <section class="load" aria-label="Archivos y parámetros">
+    <label class="drop" id="dropProg">
+      <input type="file" id="fileProg" accept=".xlsm,.xlsx,.xls">
+      <span class="eyebrow">1 · Programa de laminación</span>
+      <span class="fname" id="progName">—</span>
+      <span class="meta" id="progMeta"></span>
+      <span class="errmsg" id="progErr" hidden></span>
+      <span class="act">Elegir o arrastrar otro archivo .xlsm</span>
+    </label>
+    <label class="drop" id="dropStock">
+      <input type="file" id="fileStock" accept=".xlsx,.xls,.xlsm,.csv">
+      <span class="eyebrow">2 · Stock de palanquilla</span>
+      <span class="fname" id="stockName">—</span>
+      <span class="meta" id="stockMeta"></span>
+      <span class="errmsg" id="stockErr" hidden></span>
+      <span class="act">Elegir o arrastrar otro archivo .xlsx</span>
+    </label>
+    <div class="params">
+      <label>Órdenes desde (fecha del stock)
+        <input type="datetime-local" id="pCut">
+      </label>
+      <label>Órdenes con producción real
+        <select id="pReal">
+          <option value="hecha">Darlas por laminadas</option>
+          <option value="resta">Descontar lo real</option>
+        </select>
+      </label>
+      <label class="chk"><input type="checkbox" id="pInsp"> Contar stock en inspección de calidad</label>
+      <label>Margen para "justo" (% del requerido)
+        <input type="number" id="pMargin" min="0" max="100" step="5" value="10">
+      </label>
+      <p class="hint">Las órdenes que parten antes de la fecha del stock ya consumieron su palanquilla y no se cuentan. El stock disponible es la columna "Libre utilización".</p>
+    </div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Resumen"></section>
+  <div id="alert"></div>
+
+  <section>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="pal" aria-selected="true">Por palanquilla<span class="cnt" id="cPal"></span></button>
+      <button role="tab" data-tab="cal" aria-selected="false">Por calidad<span class="cnt" id="cCal"></span></button>
+      <button role="tab" data-tab="lar" aria-selected="false">Por largo<span class="cnt" id="cLar"></span></button>
+      <button role="tab" data-tab="seq" aria-selected="false">Secuencia<span class="cnt" id="cSeq"></span></button>
+      <button role="tab" data-tab="sin" aria-selected="false">Stock sin uso<span class="cnt" id="cSin"></span></button>
+      <span class="sp"></span>
+      <div class="tool">
+        <button class="btn" id="fltFalta" aria-pressed="false">Solo con faltante</button>
+        <button class="btn" id="copy">Copiar tabla para Excel</button>
+      </div>
+    </div>
+    <div class="tablebox" style="margin-top:12px"><table id="tbl"></table></div>
+  </section>
+
+  <footer>
+    <p><b>Cómo se calcula.</b> Requerido = columna TON (palanquilla) del programa en las órdenes pendientes; N° de palanquillas = columna C/U. El stock se cruza por código de material; si el código no existe, por sección + calidad + largo de la descripción. Piezas en stock ≈ kg ÷ (peso por metro × largo), con 132 kg/m para 130×130.</p>
+    <p><b>Se agota en</b> recorre las órdenes en el orden de inicio y marca la primera que ya no alcanza a cubrirse con el stock de ese código. <b>Liberación</b> es la primera fecha de liberación de palanquilla que indica el programa para ese código. <b>Alternativas</b> son otros largos de la misma calidad que siguen teniendo saldo después de cubrir su propio uso en el programa.</p>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/*LOGIC*/
+</script>
+<script>
+const SEED = /*SEED*/;
+const state = { prog: SEED.prog, stock: SEED.stock, tab: 'pal', onlyFalta: false, open: new Set() };
+let A = null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const f0 = n => n == null || !isFinite(n) ? '—' : Math.round(n).toLocaleString('es-CL');
+const f1 = n => n == null || !isFinite(n) ? '—' : n.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const sgn = n => (n > 0.05 ? '+' : '') + f1(n);
+const p2 = n => String(n).padStart(2, '0');
+const dt = ms => { if (ms == null) return '—'; const d = new Date(ms); return p2(d.getUTCDate()) + '-' + p2(d.getUTCMonth() + 1) + ' ' + p2(d.getUTCHours()) + ':' + p2(d.getUTCMinutes()); };
+const dd = ms => { if (ms == null) return '—'; const d = new Date(ms); return p2(d.getUTCDate()) + '-' + p2(d.getUTCMonth() + 1); };
+const palName = p => (p.grade || '?') + ' · ' + lenLabel(p.length);
+const chipTxt = { ok: 'Cubierto', justo: 'Justo', falta: 'Falta', parcial: 'Parcial', antes: 'Antes del stock', hecha: 'Laminada' };
+const chip = s => `<span class="chip ${s === 'antes' || s === 'hecha' ? 'off' : s}">${chipTxt[s] || s}</span>`;
+
+function toLocalInput(ms) { const d = new Date(ms); return d.getUTCFullYear() + '-' + p2(d.getUTCMonth() + 1) + '-' + p2(d.getUTCDate()) + 'T' + p2(d.getUTCHours()) + ':' + p2(d.getUTCMinutes()); }
+function fromLocalInput(v) { const m = v && v.match(/(\d+)-(\d+)-(\d+)T(\d+):(\d+)/); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : null; }
+
+function setCutFromStock() {
+  const d = dateFromName(state.stock.name);
+  if (d != null) $('pCut').value = toLocalInput(d);
+  else if (!$('pCut').value) $('pCut').value = toLocalInput(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
+}
+
+function opts() {
+  return { cut: fromLocalInput($('pCut').value), realMode: $('pReal').value, insp: $('pInsp').checked, margin: Math.max(0, +$('pMargin').value || 0) / 100 };
+}
+
+function renderFiles() {
+  $('progName').textContent = state.prog.name;
+  const pr = state.prog.rows;
+  const ini = pr.map(r => r.ini).filter(x => x != null);
+  $('progMeta').textContent = `Hoja "${state.prog.sheet}" · ${pr.length} órdenes · ${f0(pr.reduce((t, r) => t + r.ton, 0))} t de palanquilla · ${dd(Math.min(...ini))} a ${dd(Math.max(...ini))}`;
+  $('stockName').textContent = state.stock.name;
+  const sr = state.stock.rows;
+  $('stockMeta').textContent = `Hoja "${state.stock.sheet}" · ${new Set(sr.map(r => r.mat)).size} materiales · ${sr.length} lotes · ${f0(sr.reduce((t, r) => t + r.libre, 0) / 1000)} t libres`;
+}
+
+function run() {
+  A = analyze(state.prog.rows, state.stock.rows, opts());
+  renderKpis(); renderTable();
+}
+
+function renderKpis() {
+  const t = A.tot;
+  const pct = t.need > 0 ? t.covered / t.need : 1;
+  $('kpis').innerHTML = `
+    <div class="kpi"><span class="eyebrow">Requerido pendiente</span><span class="v">${f0(t.need)}<small>t</small></span>
+      <span class="s">${f0(t.cu)} palanquillas · ${t.ordersPend} órdenes · ${t.codes} códigos</span></div>
+    <div class="kpi"><span class="eyebrow">Cubierto con stock</span><span class="v">${Math.round(pct * 100)}<small>%</small></span>
+      <span class="s">${f0(t.covered)} t cubiertas en la secuencia</span><div class="meter"><i style="width:${(pct * 100).toFixed(1)}%"></i></div></div>
+    <div class="kpi ${t.falta > 0.5 ? 'bad' : ''}"><span class="eyebrow">Faltante</span><span class="v">${f0(t.falta)}<small>t</small></span>
+      <span class="s">${t.codesFalta} códigos con falta · ${t.codesJusto} justos</span></div>
+    <div class="kpi ${t.firstFalta ? 'bad' : ''}"><span class="eyebrow">Primera orden sin cubrir</span>
+      <span class="v">${t.firstFalta ? dt(t.firstFalta.ini).split(' ')[0] : '—'}</span>
+      <span class="s">${t.firstFalta ? `Sec ${t.firstFalta.sec ?? '—'} · ${esc(t.firstFalta.desc)} · ${esc(palName(t.firstFalta.p))}` : 'Todo el programa pendiente está cubierto'}</span></div>`;
+  const nos = A.billets.filter(b => !b.st);
+  $('alert').innerHTML = nos.length ? `<div class="alert"><b>Sin stock registrado:</b> ${nos.map(b => `${esc(palName(b.p))} (${esc(b.pc)}, ${f1(b.need)} t)`).join(' · ')}. El programa usa estos códigos y no aparecen en el reporte de stock.</div>` : '';
+  $('cPal').textContent = A.billets.length; $('cCal').textContent = A.byGrade.length; $('cLar').textContent = A.byLength.length;
+  $('cSeq').textContent = A.rows.length; $('cSin').textContent = A.unused.length;
+}
+
+function covCell(need, stock, state) {
+  const w = need > 0 ? Math.min(1, stock / need) : 1;
+  return `<td class="cov"><div class="covbar ${state}"><i style="width:${(w * 100).toFixed(1)}%"></i></div><div class="covlbl">${Math.round(Math.min(stock / (need || 1), 9.99) * 100)}% cubierto</div></td>`;
+}
+
+const TABLES = {
+  pal() {
+    const list = A.billets.filter(b => !state.onlyFalta || b.state !== 'ok');
+    const head = ['Estado', 'Palanquilla', 'Requerido t', 'Palanq.', 'Stock t', 'Palanq.', 'Saldo t', 'Cobertura', 'Se agota en', 'Liberación', 'Órdenes'];
+    const rows = list.map(b => {
+      const lib = b.orders.map(o => o.lib).filter(x => x != null);
+      const id = 'b' + b.pc;
+      const open = state.open.has(id);
+      let html = `<tr class="main" tabindex="0" data-open="${id}" aria-expanded="${open}">
+        <td>${chip(b.state)}</td>
+        <td><div class="pal">${esc(palName(b.p))}</div><div class="code">${esc(b.pc)} · ${esc(b.p.section.replace('x', '×'))}${b.via === 'descripción' ? ' · cruzado por descripción' : ''}</div></td>
+        <td class="n">${f1(b.need)}</td><td class="n muted">${f0(b.cu)}</td>
+        <td class="n">${f1(b.stock)}${b.insp > 0 && !opts().insp ? `<div class="code">+${f1(b.insp)} insp.</div>` : ''}${b.bloq > 0 ? `<div class="code">${f1(b.bloq)} bloq.</div>` : ''}</td>
+        <td class="n muted">${f0(b.stockCu)}</td>
+        <td class="n ${b.saldo < 0 ? 'neg' : 'pos'}">${sgn(b.saldo)}</td>
+        ${covCell(b.need, b.stock, b.state)}
+        <td>${b.runOut ? `<div>${dt(b.runOut.ini)}</div><div class="code">Sec ${b.runOut.sec ?? '—'}</div>` : '<span class="muted">No se agota</span>'}</td>
+        <td class="n">${lib.length ? dd(Math.min(...lib)) : '—'}</td>
+        <td class="n">${b.orders.length}</td></tr>`;
+      if (open) html += `<tr class="sub"><td colspan="11">${detailBillet(b)}</td></tr>`;
+      return { html, tsv: [chipTxt[b.state], palName(b.p) + ' (' + b.pc + ')', f1(b.need), f0(b.cu), f1(b.stock), f0(b.stockCu), f1(b.saldo), b.runOut ? dt(b.runOut.ini) + ' Sec ' + (b.runOut.sec ?? '') : '', lib.length ? dd(Math.min(...lib)) : '', b.orders.length] };
+    });
+    return { head, rows, nums: [2, 3, 4, 5, 6, 9, 10] };
+  },
+  cal() { return groupTable(A.byGrade, 'Calidad'); },
+  lar() { return groupTable(A.byLength, 'Largo'); },
+  seq() {
+    const list = A.rows.filter(r => !state.onlyFalta || (r.need > 0 && r.cov !== 'ok'));
+    const head = ['Sec', 'Inicio', 'Producto', 'Corte m', 'Prog. t', 'Palanquilla', 'Requerido t', 'Palanq.', 'Cubierto t', 'Estado'];
+    const rows = list.map(r => {
+      const st = r.need > 0 ? r.cov : r.status;
+      const html = `<tr class="seqrow ${r.need > 0 ? '' : r.status}">
+        <td class="n">${r.sec ?? '—'}</td><td class="n">${dt(r.ini)}</td>
+        <td><div>${esc(r.desc)}</div><div class="code">${esc(r.prod)}${r.of ? ' · OF ' + esc(r.of) : ''}</div></td>
+        <td class="n">${r.corte != null ? String(r.corte).replace('.', ',') : '—'}</td><td class="n">${f1(r.progr)}</td>
+        <td><div class="pal">${esc(palName(r.p))}</div><div class="code">${esc(r.pc)}</div></td>
+        <td class="n">${r.need > 0 ? f1(r.need) : '<span class="muted">' + f1(r.ton) + '</span>'}</td>
+        <td class="n muted">${f0(r.need > 0 ? r.needCu : r.cu)}</td>
+        <td class="n">${r.need > 0 ? f1(r.covered) : '—'}</td><td>${chip(st)}</td></tr>`;
+      return { html, tsv: [r.sec ?? '', dt(r.ini), r.desc, r.corte ?? '', f1(r.progr), palName(r.p) + ' (' + r.pc + ')', f1(r.need), f0(r.needCu), r.need > 0 ? f1(r.covered) : '', chipTxt[st]] };
+    });
+    return { head, rows, nums: [0, 1, 3, 4, 6, 7, 8] };
+  },
+  sin() {
+    const head = ['Material', 'Descripción', 'Libre t', 'Inspección t', 'Bloqueado t', 'Palanq. aprox.', 'Lotes'];
+    const rows = A.unused.map(s => {
+      const pz = s.p.length ? s.libre / (kgPerM(s.p) * s.p.length) : null;
+      const html = `<tr><td class="mono">${esc(s.mat)}</td><td><div class="pal">${esc(palName(s.p))}</div><div class="code">${esc(s.desc)}</div></td>
+        <td class="n">${f1(s.libre / 1000)}</td><td class="n">${s.insp ? f1(s.insp / 1000) : '—'}</td><td class="n">${s.bloq ? f1(s.bloq / 1000) : '—'}</td>
+        <td class="n muted">${f0(pz)}</td><td class="n">${s.lotes}</td></tr>`;
+      return { html, tsv: [s.mat, s.desc, f1(s.libre / 1000), f1(s.insp / 1000), f1(s.bloq / 1000), f0(pz), s.lotes] };
+    });
+    return { head, rows, nums: [2, 3, 4, 5, 6], note: 'Materiales con stock que el programa cargado no usa.' };
+  },
+};
+
+function groupTable(groups, label) {
+  const list = groups.filter(g => !state.onlyFalta || g.falta > 0.05);
+  const head = ['Estado', label, 'Requerido t', 'Palanq.', 'Stock de los códigos usados t', 'Faltante t', 'Cobertura', 'Stock total del grupo t', 'Detalle por código'];
+  const rows = list.map(g => {
+    const st = g.falta > 0.05 ? 'falta' : g.codes.some(c => c.state === 'justo') ? 'justo' : 'ok';
+    const extra = g.stockAll - g.stockUsed;
+    const html = `<tr><td>${chip(st)}</td><td class="pal">${esc(g.label)}</td>
+      <td class="n">${f1(g.need)}</td><td class="n muted">${f0(g.cu)}</td><td class="n">${f1(g.stockUsed)}</td>
+      <td class="n ${g.falta > 0.05 ? 'neg' : ''}">${g.falta > 0.05 ? f1(g.falta) : '—'}</td>
+      ${covCell(g.need, g.need - g.falta, st)}
+      <td class="n">${f1(g.stockAll)}${extra > 0.05 ? `<div class="code">+${f1(extra)} en otros ${label === 'Calidad' ? 'largos' : 'aceros'}</div>` : ''}</td>
+      <td>${g.codes.map(c => `<div style="white-space:nowrap"><span class="sw" style="background:var(--${c.state === 'falta' ? 'bad' : c.state === 'justo' ? 'warn' : 'ok'})"></span>${esc(label === 'Calidad' ? lenLabel(c.p.length) : c.p.grade)}: ${f1(c.need)} req. / ${f1(c.stock)} stock</div>`).join('')}</td></tr>`;
+    return { html, tsv: [chipTxt[st], g.label, f1(g.need), f0(g.cu), f1(g.stockUsed), f1(g.falta), f1(g.stockAll), g.codes.map(c => (label === 'Calidad' ? lenLabel(c.p.length) : c.p.grade) + ': ' + f1(c.need) + '/' + f1(c.stock)).join('; ')] };
+  });
+  return { head, rows, nums: [2, 3, 4, 5, 7] };
+}
+
+function detailBillet(b) {
+  let cum = 0;
+  const ord = b.orders.map(o => { cum += o.need; return `<tr><td class="n">${o.sec ?? '—'}</td><td class="n">${dt(o.ini)}</td><td>${esc(o.desc)}</td><td class="n">${f1(o.need)}</td><td class="n muted">${f0(o.needCu)}</td><td class="n">${f1(cum)}</td><td>${chip(o.cov)}</td></tr>`; }).join('');
+  let alts;
+  if (b.state === 'ok') alts = `<p class="note">Cubierto con el mismo código. Saldo después del programa: ${f1(b.saldo)} t.</p>`;
+  else if (!b.alts.length) alts = b.state === 'justo'
+    ? `<p class="note">Alcanza con ${f1(b.saldo)} t de saldo, menos que el margen definido. No hay otros largos de ${esc(b.p.grade)} con saldo libre.</p>`
+    : `<p class="note">No hay otros largos de ${esc(b.p.grade)} con saldo libre después del programa. Faltan ${f1(-b.saldo)} t${b.runOut ? ', necesarias desde el ' + dd(b.runOut.ini) : ''}.</p>`;
+  else alts = `<div class="alt">${b.alts.slice(0, 6).map(a => `<div><b>${esc(palName(a.s.p))}</b> <span class="code">${esc(a.s.mat)}</span><br>Saldo libre después del programa: <b>${f1(a.saldo)} t</b> (≈ ${f0(a.saldo / (kgPerM(a.s.p) * (a.s.p.length || 1) / 1000))} palanq.)${(a.s.p.length || 0) > 6 ? ' · requiere corte' : ''}</div>`).join('')}</div>
+    <p class="note" style="margin-top:6px">Otro largo cambia el peso por pieza y el corte en T-4; valida con el ritmo del producto.</p>`;
+  return `<div class="detail"><div class="scroll"><h3>Órdenes que la usan</h3><table><thead><tr><th class="n">Sec</th><th class="n">Inicio</th><th>Producto</th><th class="n">Req. t</th><th class="n">Palanq.</th><th class="n">Acum. t</th><th>Estado</th></tr></thead><tbody>${ord}</tbody></table></div>
+    <div><h3>${b.state === 'ok' ? 'Saldo' : 'Alternativas misma calidad'}</h3>${alts}</div></div>`;
+}
+
+let lastTsv = '';
+function renderTable() {
+  const t = TABLES[state.tab]();
+  const th = t.head.map((h, i) => `<th class="${t.nums.includes(i) ? 'n' : ''}">${h}</th>`).join('');
+  const body = t.rows.length ? t.rows.map(r => r.html).join('') : `<tr><td colspan="${t.head.length}" class="muted" style="padding:20px">${state.onlyFalta ? 'Nada con faltante. Quita el filtro para ver todo.' : 'Sin datos.'}</td></tr>`;
+  $('tbl').innerHTML = `<thead><tr>${th}</tr></thead><tbody>${body}</tbody>`;
+  lastTsv = [t.head.join('\t'), ...t.rows.map(r => r.tsv.join('\t'))].join('\n');
+  $('fltFalta').hidden = state.tab === 'sin';
+}
+
+/* eventos */
+document.querySelectorAll('.tabs [role=tab]').forEach(b => b.addEventListener('click', () => {
+  state.tab = b.dataset.tab;
+  document.querySelectorAll('.tabs [role=tab]').forEach(x => x.setAttribute('aria-selected', x === b));
+  try { localStorage.setItem('plq-tab', state.tab); } catch (e) {}
+  renderTable();
+}));
+$('tbl').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-open]'); if (!tr) return;
+  const id = tr.dataset.open; state.open.has(id) ? state.open.delete(id) : state.open.add(id); renderTable();
+});
+$('tbl').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const tr = e.target.closest('tr[data-open]'); if (!tr) return; e.preventDefault();
+  const id = tr.dataset.open; state.open.has(id) ? state.open.delete(id) : state.open.add(id); renderTable();
+  const again = $('tbl').querySelector(`tr[data-open="${id}"]`); if (again) again.focus();
+});
+$('fltFalta').addEventListener('click', () => { state.onlyFalta = !state.onlyFalta; $('fltFalta').classList.toggle('on', state.onlyFalta); $('fltFalta').setAttribute('aria-pressed', state.onlyFalta); renderTable(); });
+['pCut', 'pReal', 'pInsp', 'pMargin'].forEach(id => $(id).addEventListener('change', run));
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200); }
+$('copy').addEventListener('click', () => {
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = lastTsv; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} ta.remove(); toast(ok ? 'Tabla copiada. Pégala en Excel.' : 'No se pudo copiar en este visor.'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(lastTsv).then(() => toast('Tabla copiada. Pégala en Excel.'), fallback); else fallback();
+});
+
+function readFile(file, kind) {
+  const errEl = $(kind === 'prog' ? 'progErr' : 'stockErr'), box = $(kind === 'prog' ? 'dropProg' : 'dropStock');
+  errEl.hidden = true; box.classList.remove('err');
+  if (typeof XLSX === 'undefined') { errEl.textContent = 'No cargó el lector de Excel. Revisa la conexión y recarga la página.'; errEl.hidden = false; box.classList.add('err'); return; }
+  $(kind === 'prog' ? 'progName' : 'stockName').textContent = 'Leyendo ' + file.name + '…';
+  const fr = new FileReader();
+  fr.onload = () => {
+    try {
+      const wb = XLSX.read(new Uint8Array(fr.result), { type: 'array', cellDates: false });
+      if (kind === 'prog') { const r = parseProgramWB(wb); state.prog = { name: file.name, sheet: r.sheet, rows: r.rows }; }
+      else { const r = parseStockWB(wb); state.stock = { name: file.name, sheet: r.sheet, rows: r.rows }; setCutFromStock(); }
+      state.open.clear(); renderFiles(); run(); toast('Archivo cargado: ' + file.name);
+    } catch (err) {
+      renderFiles(); errEl.textContent = err.message || String(err); errEl.hidden = false; box.classList.add('err');
+    }
+  };
+  fr.readAsArrayBuffer(file);
+}
+[['fileProg', 'dropProg', 'prog'], ['fileStock', 'dropStock', 'stock']].forEach(([inp, box, kind]) => {
+  $(inp).addEventListener('change', e => { const f = e.target.files[0]; if (f) readFile(f, kind); e.target.value = ''; });
+  const b = $(box);
+  b.addEventListener('dragover', e => { e.preventDefault(); b.classList.add('over'); });
+  b.addEventListener('dragleave', () => b.classList.remove('over'));
+  b.addEventListener('drop', e => { e.preventDefault(); b.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) readFile(f, kind); });
+});
+
+try { const t = localStorage.getItem('plq-tab'); if (t && TABLES[t]) { state.tab = t; document.querySelectorAll('.tabs [role=tab]').forEach(x => x.setAttribute('aria-selected', x.dataset.tab === t)); } } catch (e) {}
+setCutFromStock(); renderFiles(); run();
+</script>
