@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline de planta</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f6f6f4;
+  --surface: #ffffff;
+  --border: #e2e1dc;
+  --grid: #ecebe6;
+  --text: #1a1a19;
+  --text-2: #55544f;
+  --text-3: #8a8983;
+  --accent: #1565c0;
+  --hover: rgba(0,0,0,.04);
+  --sel: rgba(21,101,192,.10);
+  --c-prod: #2e7d32;
+  --c-prog: #1565c0;
+  --c-padron: #7b1fa2;
+  --c-falla: #d32f2f;
+  --c-retraso: #ef6c00;
+  --c-libre: #bdbdbd;
+  --c-sinreg: #eeeeec;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211;
+    --surface: #1c1c1b;
+    --border: #33332f;
+    --grid: #2a2a27;
+    --text: #f0efec;
+    --text-2: #c3c2b7;
+    --text-3: #8f8e86;
+    --accent: #5aa2f0;
+    --hover: rgba(255,255,255,.05);
+    --sel: rgba(90,162,240,.16);
+    --c-prod: #3d9a42;
+    --c-prog: #3b82e0;
+    --c-padron: #a35ed0;
+    --c-falla: #e5534b;
+    --c-retraso: #f08a24;
+    --c-libre: #5c5c58;
+    --c-sinreg: #262624;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211;
+  --surface: #1c1c1b;
+  --border: #33332f;
+  --grid: #2a2a27;
+  --text: #f0efec;
+  --text-2: #c3c2b7;
+  --text-3: #8f8e86;
+  --accent: #5aa2f0;
+  --hover: rgba(255,255,255,.05);
+  --sel: rgba(90,162,240,.16);
+  --c-prod: #3d9a42;
+  --c-prog: #3b82e0;
+  --c-padron: #a35ed0;
+  --c-falla: #e5534b;
+  --c-retraso: #f08a24;
+  --c-libre: #5c5c58;
+  --c-sinreg: #262624;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+main { max-width: 1500px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 22px; margin: 0 0 2px; }
+.sub { color: var(--text-2); margin: 0 0 16px; font-size: 13px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end; }
+.controls label { display: flex; flex-direction: column; font-size: 12px; color: var(--text-2); gap: 3px; }
+select, input[type=time], button {
+  font: inherit; font-size: 13px; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
+}
+button { cursor: pointer; }
+button:hover { background: var(--hover); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; border-right: 1px solid var(--border); }
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: var(--sel); color: var(--accent); font-weight: 600; }
+.file { margin-left: auto; }
+.file input { display: none; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.kpi .v { font-size: 22px; font-weight: 650; }
+.kpi .l { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; flex: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 2px 0 10px; }
+.legend button { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; font-size: 12.5px; }
+.legend button .m { color: var(--text-3); }
+.legend button.off { opacity: .4; }
+.chart-title { text-align: center; font-size: 18px; font-weight: 650; margin: 2px 0 8px; }
+#chart { width: 100%; position: relative; }
+#chart svg { display: block; width: 100%; }
+#chart .row:hover .rowbg { fill: var(--hover); }
+#chart .row.sel .rowbg { fill: var(--sel); }
+.axis text, .lab text { fill: var(--text); font-size: 12.5px; }
+.axis .t { fill: var(--text-2); }
+.pct { fill: var(--text-2); font-size: 11.5px; }
+.gridl { stroke: var(--grid); stroke-width: 1; }
+.seg-r { cursor: pointer; }
+.dim .seg-r:not(.hl) { opacity: .18; }
+#tip {
+  position: fixed; pointer-events: none; z-index: 10; max-width: 380px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: 0 6px 22px rgba(0,0,0,.18); padding: 9px 11px; font-size: 12.5px; display: none;
+}
+#tip .h { font-weight: 650; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+#tip .k { color: var(--text-3); }
+.split { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+h2 { font-size: 15px; margin: 0 0 10px; }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--text-2); font-weight: 600; white-space: nowrap; }
+td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bars .b { display: grid; grid-template-columns: 120px 1fr 64px; gap: 8px; align-items: center; margin: 5px 0; font-size: 12.5px; }
+.bars .track { height: 12px; background: var(--grid); border-radius: 3px; overflow: hidden; }
+.bars .fill { height: 100%; border-radius: 0 3px 3px 0; }
+.muted { color: var(--text-3); }
+.drop { outline: 2px dashed var(--accent); outline-offset: -8px; }
+.empty { padding: 40px; text-align: center; color: var(--text-2); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Timeline de planta</h1>
+  <p class="sub" id="sub">Cada fila es un día del mes. Sin declaración = tren disponible / en producción.</p>
+
+  <div class="card controls">
+    <label>Mes <select id="mes"></select></label>
+    <label>Desde <input type="time" id="desde" value="00:00" step="1800"></label>
+    <label>Hasta <input type="time" id="hasta" value="23:59" step="1800"></label>
+    <label>Días
+      <span class="seg" id="dias">
+        <button data-v="todos" class="on">Todos</button><button data-v="lv">L-V</button><button data-v="sd">Sáb-Dom</button>
+      </span>
+    </label>
+    <label>Colorear por
+      <span class="seg" id="modo">
+        <button data-v="tipo" class="on">Tipo</button><button data-v="disc">Disciplina</button>
+      </span>
+    </label>
+    <label>Orden
+      <span class="seg" id="orden">
+        <button data-v="desc" class="on">Recientes arriba</button><button data-v="asc">Día 1 arriba</button>
+      </span>
+    </label>
+    <label class="file"><span>&nbsp;</span>
+      <button type="button" id="btnFile">Cargar CSV…</button>
+      <input type="file" id="file" accept=".csv,text/csv">
+    </label>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="chart-title" id="ctitle"></div>
+    <div class="legend" id="legend"></div>
+    <div id="chart"></div>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h2 id="detTitle">Detalle del día</h2>
+      <div class="tbl-wrap" id="detalle"><p class="muted">Haz clic en un día del gráfico para ver sus interrupciones.</p></div>
+    </div>
+    <div class="card">
+      <h2>Minutos por categoría en el mes</h2>
+      <div class="bars" id="bars"></div>
+    </div>
+  </div>
+</main>
+<div id="tip"></div>
+
+<script>
+const CSV_INICIAL = __CSV__;
+const NOMBRE_INICIAL = __NOMBRE__;
+
+const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+// Categorías "Tipo" (como la referencia) y colores por disciplina para las fallas.
+const TIPOS = {
+  prod:    { nombre: "Producción",          color: "var(--c-prod)" },
+  prog:    { nombre: "Parada programada",   color: "var(--c-prog)" },
+  padron:  { nombre: "Parada padrón",       color: "var(--c-padron)" },
+  falla:   { nombre: "Interrupción/falla",  color: "var(--c-falla)" },
+  retraso: { nombre: "Retraso",             color: "var(--c-retraso)" },
+  libre:   { nombre: "Libre (sin programa)",color: "var(--c-libre)" },
+  sinreg:  { nombre: "Sin registro",        color: "var(--c-sinreg)" },
+};
+const COLOR_DISC = {
+  "Operación": "#e34948", "Electrónica": "#eda100", "Mecánica": "#eb6834",
+  "Equipo cambio": "#e87ba4", "Acería": "#8d6e63", "Maestranza": "#00838f",
+  "Eléctrica": "#ad1457", "Externas": "#546e7a",
+};
+const EXTRA = ["#6d4c41", "#c0ca33", "#0277bd", "#f06292", "#26a69a", "#9e9d24"];
+
+const norm = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+
+function tipoDe(ev) {
+  const d = norm(ev.disciplina);
+  if (d === "parada programada") return "prog";
+  if (d.startsWith("parada padron")) return "padron";
+  if (d === "libre") return "libre";
+  if (/retraso/.test(norm(ev.zona + " " + ev.equipo + " " + ev.ocurrencia))) return "retraso";
+  return "falla";
+}
+
+// ---------- CSV ----------
+function parseCSV(texto) {
+  const filas = []; let fila = [], campo = "", q = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (q) {
+      if (c === '"') { if (texto[i + 1] === '"') { campo += '"'; i++; } else q = false; }
+      else campo += c;
+    } else if (c === '"') q = true;
+    else if (c === ",") { fila.push(campo); campo = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && texto[i + 1] === "\n") i++;
+      fila.push(campo); filas.push(fila); fila = []; campo = "";
+    } else campo += c;
+  }
+  if (campo || fila.length) { fila.push(campo); filas.push(fila); }
+  return filas;
+}
+
+function leerEventos(texto) {
+  texto = texto.replace(/^﻿/, "");
+  const filas = parseCSV(texto);
+  const h = filas.findIndex(f => f[0] && f[0].trim() === "Fecha_Inicio");
+  if (h < 0) throw new Error("No se encontró la columna Fecha_Inicio en el CSV.");
+  const cab = filas[h].map(c => c.trim());
+  const ix = n => cab.indexOf(n);
+  const evs = [];
+  for (let i = h + 1; i < filas.length; i++) {
+    const f = filas[i];
+    if (!f[0] || !f[0].trim()) break; // fin de la tabla
+    const m = f[0].trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) continue;
+    const ini = new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0));
+    const dur = parseFloat((f[ix("DuracionMinutos")] || "0").replace(/,/g, "")) || 0;
+    const g = n => (ix(n) >= 0 ? (f[ix(n)] || "").trim() : "");
+    const ev = {
+      ini, fin: new Date(ini.getTime() + dur * 60000), dur,
+      disciplina: g("Disciplina"), zona: g("Zona"), equipo: g("Equipo"), subequipo: g("Subequipo"),
+      ocurrencia: g("Ocurrencia"), hecho: g("Hecho"), causa: g("Causa"), accion: g("Accion"),
+      producto: g("Productos"), usuario: g("user_id"),
+    };
+    ev.tipo = tipoDe(ev);
+    evs.push(ev);
+  }
+  evs.sort((a, b) => a.ini - b.ini);
+  return evs;
+}
+
+// ---------- estado ----------
+const S = { eventos: [], nombre: "", mes: null, desde: 0, hasta: 1440, dias: "todos", modo: "tipo", orden: "desc", resaltadas: new Set(), diaSel: null };
+let filasMes = [];
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const hhmm = min => { const t = Math.round(min); return `${pad(Math.floor(t / 60))}:${pad(t % 60)}`; };
+const fmtMin = m => m >= 60 ? `${Math.floor(m / 60)} h ${pad(Math.round(m % 60))} min` : `${m.toFixed(m < 10 ? 1 : 0).replace(".", ",")} min`;
+const fmtNum = (n, d = 0) => n.toLocaleString("es-CL", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtHora = d => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function colorDisc(nombre) {
+  if (COLOR_DISC[nombre]) return COLOR_DISC[nombre];
+  const otras = [...new Set(S.eventos.map(e => e.disciplina))].filter(d => !COLOR_DISC[d]).sort();
+  return EXTRA[otras.indexOf(nombre) % EXTRA.length] || "#888";
+}
+
+// Clave de color/leyenda de un segmento según el modo.
+function claveSeg(s) {
+  if (!s.ev) return s.tipo;
+  if (S.modo === "tipo" || s.tipo === "prog" || s.tipo === "padron" || s.tipo === "libre") return s.tipo;
+  return "d:" + s.ev.disciplina;
+}
+function infoClave(k) {
+  if (k.startsWith("d:")) { const n = k.slice(2); return { nombre: n, color: colorDisc(n) }; }
+  return TIPOS[k];
+}
+
+// Segmentos de un día (minutos desde 00:00), rellenando los huecos con producción.
+function segmentosDia(fecha, finDatos) {
+  const d0 = fecha.getTime(), d1 = d0 + 86400000;
+  const corte = Math.min(d1, Math.max(d0, finDatos));
+  const segs = []; let cursor = d0;
+  for (const ev of S.eventos) {
+    if (ev.fin <= d0 || ev.ini >= d1 || ev.dur <= 0) continue;
+    const a = Math.max(ev.ini.getTime(), d0), b = Math.min(ev.fin.getTime(), d1);
+    if (a > cursor) segs.push({ tipo: "prod", a: cursor, b: Math.min(a, corte) });
+    segs.push({ tipo: ev.tipo, ev, a: Math.max(a, cursor), b });
+    cursor = Math.max(cursor, b);
+  }
+  if (cursor < corte) segs.push({ tipo: "prod", a: cursor, b: corte });
+  cursor = Math.max(cursor, corte);
+  if (cursor < d1) segs.push({ tipo: "sinreg", a: cursor, b: d1 });
+  return segs
+    .filter(s => s.b > s.a)
+    .map(s => ({ ...s, m0: (s.a - d0) / 60000, m1: (s.b - d0) / 60000 }));
+}
+
+function construirMes() {
+  const [y, m] = S.mes.split("-").map(Number);
+  const finDatos = S.eventos.reduce((mx, e) => Math.max(mx, e.fin.getTime()), 0);
+  const n = new Date(y, m, 0).getDate();
+  filasMes = [];
+  for (let d = 1; d <= n; d++) {
+    const fecha = new Date(y, m - 1, d);
+    const dow = fecha.getDay();
+    if (S.dias === "lv" && (dow === 0 || dow === 6)) continue;
+    if (S.dias === "sd" && dow >= 1 && dow <= 5) continue;
+    filasMes.push({ fecha, dow, segs: segmentosDia(fecha, finDatos) });
+  }
+  if (S.orden === "desc") filasMes.reverse();
+}
+
+// Minutos de cada segmento dentro de la ventana horaria.
+function enVentana(s) { return Math.max(0, Math.min(s.m1, S.hasta) - Math.max(s.m0, S.desde)); }
+
+// ---------- render ----------
+function render() {
+  if (!S.eventos.length) {
+    $("chart").innerHTML = `<div class="empty">Carga el CSV de “Hecho causa acción” con el botón <b>Cargar CSV…</b> o arrástralo a esta página.</div>`;
+    $("kpis").innerHTML = ""; $("legend").innerHTML = ""; $("bars").innerHTML = ""; $("ctitle").textContent = "";
+    return;
+  }
+  construirMes();
+  const [y, m] = S.mes.split("-").map(Number);
+  const rango = `${hhmm(S.desde)} → ${hhmm(S.hasta)}`;
+  const diasTxt = { todos: "", lv: " L-V", sd: " Sáb-Dom" }[S.dias];
+  $("ctitle").textContent = `Timeline ${MESES[m - 1]} ${y}${diasTxt} (${rango})`;
+  $("sub").textContent = `${S.nombre ? S.nombre + " · " : ""}${S.eventos.length} declaraciones. Cada fila es un día; sin declaración = tren disponible / en producción.`;
+
+  // Totales del mes por clave y por tipo
+  const tot = new Map(), totTipo = {};
+  for (const f of filasMes) for (const s of f.segs) {
+    const mm = enVentana(s); if (!mm) continue;
+    const k = claveSeg(s);
+    tot.set(k, (tot.get(k) || 0) + mm);
+    totTipo[s.tipo] = (totTipo[s.tipo] || 0) + mm;
+  }
+  renderKpis(totTipo);
+  renderLegend(tot);
+  renderChart();
+  renderBars(tot);
+  renderDetalle();
+}
+
+function renderKpis(t) {
+  const g = k => t[k] || 0;
+  const conPrograma = g("prod") + g("prog") + g("padron") + g("falla") + g("retraso");
+  const disp = conPrograma ? g("prod") / conPrograma * 100 : 0;
+  const nInt = new Set();
+  for (const f of filasMes) for (const s of f.segs) if (s.ev && (s.tipo === "falla" || s.tipo === "retraso") && enVentana(s)) nInt.add(s.ev);
+  const kp = [
+    ["Producción / disponible", `${fmtNum(disp, 1)} %`, "var(--c-prod)", `${fmtNum(g("prod") / 60, 1)} h de ${fmtNum(conPrograma / 60, 1)} h con programa`],
+    ["Interrupción/falla", `${fmtNum(g("falla") / 60, 1)} h`, "var(--c-falla)", `${nInt.size} eventos de falla o retraso`],
+    ["Retraso", `${fmtNum(g("retraso") / 60, 1)} h`, "var(--c-retraso)", ""],
+    ["Parada padrón", `${fmtNum(g("padron") / 60, 1)} h`, "var(--c-padron)", ""],
+    ["Parada programada", `${fmtNum(g("prog") / 60, 1)} h`, "var(--c-prog)", ""],
+    ["Libre (sin programa)", `${fmtNum(g("libre") / 60, 1)} h`, "var(--c-libre)", ""],
+  ];
+  $("kpis").innerHTML = kp.map(([l, v, c, s]) =>
+    `<div class="kpi"><div class="l"><span class="sw" style="background:${c}"></span>${l}</div><div class="v">${v}</div>${s ? `<div class="l">${s}</div>` : ""}</div>`).join("");
+}
+
+function ordenClaves(tot) {
+  const base = ["prod", "prog", "padron"];
+  const resto = [...tot.keys()].filter(k => !base.includes(k) && !["libre", "sinreg"].includes(k))
+    .sort((a, b) => (a === "retraso") - (b === "retraso") || tot.get(b) - tot.get(a));
+  return [...base, ...resto, "libre", "sinreg"].filter(k => tot.has(k) || base.includes(k));
+}
+
+function renderLegend(tot) {
+  $("legend").innerHTML = ordenClaves(tot).map(k => {
+    const i = infoClave(k);
+    return `<button data-k="${esc(k)}" class="${S.resaltadas.size && !S.resaltadas.has(k) ? "off" : ""}" title="Clic: resaltar esta categoría">
+      <span class="sw" style="background:${i.color}"></span>${esc(i.nombre)} <span class="m">${fmtNum((tot.get(k) || 0) / 60, 1)} h</span></button>`;
+  }).join("");
+  $("legend").querySelectorAll("button").forEach(b => b.onclick = () => {
+    const k = b.dataset.k;
+    S.resaltadas.has(k) ? S.resaltadas.delete(k) : S.resaltadas.add(k);
+    render();
+  });
+}
+
+function renderChart() {
+  const W = Math.max(360, $("chart").clientWidth);
+  const angosto = W < 640;
+  const L = angosto ? 62 : 92, R = angosto ? 44 : 60, T = 6, rowH = angosto ? 22 : 30, barH = angosto ? 12 : 16, B = 52;
+  const pw = W - L - R, H = T + filasMes.length * rowH + B;
+  const span = S.hasta - S.desde;
+  const x = mm => L + (mm - S.desde) / span * pw;
+
+  // Paso de las marcas del eje según el rango visible
+  const paso = [30, 60, 120, 180, 240].find(p => span / p <= (angosto ? 6 : 13)) || 360;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Línea de tiempo diaria">`;
+  for (let t = Math.ceil(S.desde / paso) * paso; t <= S.hasta + 0.01; t += paso) {
+    svg += `<line class="gridl" x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${T + filasMes.length * rowH}"/>`;
+    svg += `<text class="axis t" x="${x(t)}" y="${T + filasMes.length * rowH + 18}" text-anchor="middle" font-size="12">${hhmm(t)}</text>`;
+  }
+  svg += `<text class="axis" x="${L + pw / 2}" y="${H - 8}" text-anchor="middle" font-weight="600" font-size="13" fill="var(--text)">Hora del día</text>`;
+
+  const dim = S.resaltadas.size > 0;
+  filasMes.forEach((f, i) => {
+    const y0 = T + i * rowH, yb = y0 + (rowH - barH) / 2;
+    const fechaTxt = `${pad(f.fecha.getDate())}-${pad(f.fecha.getMonth() + 1)} ${DIAS[f.dow]}`;
+    const sel = S.diaSel && S.diaSel.getTime() === f.fecha.getTime();
+    let prod = 0, prog = 0;
+    for (const s of f.segs) { const mm = enVentana(s); if (s.tipo === "prod") prod += mm; if (!["libre", "sinreg"].includes(s.tipo)) prog += mm; }
+    const pct = prog ? `${Math.round(prod / prog * 100)}%` : "—";
+    svg += `<g class="row${sel ? " sel" : ""}" data-i="${i}">
+      <rect class="rowbg" x="0" y="${y0}" width="${W}" height="${rowH}" fill="transparent"/>
+      <text class="lab" x="${L - 10}" y="${y0 + rowH / 2 + 4}" text-anchor="end" font-size="${angosto ? 11 : 13}" fill="var(--text)"${f.dow === 0 || f.dow === 6 ? ' font-style="italic"' : ""}>${fechaTxt}</text>
+      <text class="pct" x="${W - R + 8}" y="${y0 + rowH / 2 + 4}" font-size="11.5" fill="var(--text-2)">${pct}</text>`;
+    for (const [j, s] of f.segs.entries()) {
+      const a = Math.max(s.m0, S.desde), b = Math.min(s.m1, S.hasta);
+      if (b <= a) continue;
+      const k = claveSeg(s), info = infoClave(k);
+      let x0 = x(a), w = x(b) - x0;
+      if (s.ev && w < 1.5) { x0 -= (1.5 - w) / 2; w = 1.5; } // eventos cortos siempre visibles
+      const cls = "seg-r" + (dim && S.resaltadas.has(k) ? " hl" : "");
+      const rayado = s.tipo === "sinreg" ? ` stroke="var(--border)" stroke-dasharray="3 3"` : "";
+      svg += `<rect class="${cls}" data-i="${i}" data-j="${j}" x="${x0.toFixed(2)}" y="${yb}" width="${w.toFixed(2)}" height="${barH}" fill="${info.color}"${rayado}/>`;
+    }
+    svg += `</g>`;
+  });
+  svg += `<text x="${W - R + 8}" y="${T + filasMes.length * rowH + 36}" font-size="11" fill="var(--text-3)">% prod.</text>`;
+  svg += `</svg>`;
+  $("chart").innerHTML = svg;
+  $("chart").classList.toggle("dim", dim);
+  $("chart").querySelector("svg").classList.toggle("dim", dim);
+}
+
+function renderBars(tot) {
+  const ks = ordenClaves(tot).filter(k => k !== "prod" && k !== "sinreg" && tot.get(k));
+  const max = Math.max(...ks.map(k => tot.get(k)), 1);
+  $("bars").innerHTML = ks.map(k => {
+    const i = infoClave(k);
+    return `<div class="b"><span>${esc(i.nombre)}</span><div class="track"><div class="fill" style="width:${tot.get(k) / max * 100}%;background:${i.color}"></div></div><span class="n" style="text-align:right">${fmtNum(tot.get(k))} min</span></div>`;
+  }).join("") || `<p class="muted">Sin interrupciones en el período.</p>`;
+}
+
+function renderDetalle() {
+  const f = S.diaSel && filasMes.find(r => r.fecha.getTime() === S.diaSel.getTime());
+  if (!f) { $("detTitle").textContent = "Detalle del día"; return; }
+  $("detTitle").textContent = `Detalle ${DIAS[f.dow]} ${pad(f.fecha.getDate())}-${pad(f.fecha.getMonth() + 1)}-${f.fecha.getFullYear()}`;
+  const evs = f.segs.filter(s => s.ev && enVentana(s));
+  if (!evs.length) { $("detalle").innerHTML = `<p class="muted">Sin declaraciones en la ventana: el tren estuvo disponible.</p>`; return; }
+  $("detalle").innerHTML = `<table><thead><tr><th>Inicio</th><th>Fin</th><th class="n">Min</th><th>Tipo</th><th>Disciplina</th><th>Zona / Equipo</th><th>Ocurrencia</th><th>Hecho</th></tr></thead><tbody>${
+    evs.map(s => {
+      const e = s.ev, i = infoClave(claveSeg(s));
+      return `<tr><td>${fmtHora(e.ini)}</td><td>${fmtHora(e.fin)}</td><td class="n">${fmtNum(e.dur, 2)}</td>
+        <td><span class="sw" style="background:${i.color};vertical-align:-1px"></span> ${esc(TIPOS[e.tipo].nombre)}</td>
+        <td>${esc(e.disciplina)}</td><td>${esc(e.zona)}${e.equipo ? " / " + esc(e.equipo) : ""}</td><td>${esc(e.ocurrencia)}</td><td>${esc(e.hecho)}</td></tr>`;
+    }).join("")}</tbody></table>`;
+}
+
+// ---------- interacción ----------
+const tip = $("tip");
+$("chart").addEventListener("mousemove", ev => {
+  const r = ev.target.closest(".seg-r");
+  if (!r) { tip.style.display = "none"; return; }
+  const f = filasMes[+r.dataset.i], s = f.segs[+r.dataset.j], info = infoClave(claveSeg(s));
+  const a = Math.max(s.m0, S.desde), b = Math.min(s.m1, S.hasta);
+  let html = `<div class="h"><span class="sw" style="background:${info.color}"></span>${esc(s.ev ? TIPOS[s.tipo].nombre : info.nombre)}</div>`;
+  html += `<div>${pad(f.fecha.getDate())}-${pad(f.fecha.getMonth() + 1)} ${DIAS[f.dow]} · ${hhmm(s.m0)} → ${hhmm(s.m1)} · <b>${fmtMin(s.m1 - s.m0)}</b></div>`;
+  if (s.ev) {
+    const e = s.ev;
+    const filas = [["Disciplina", e.disciplina], ["Zona", e.zona], ["Equipo", [e.equipo, e.subequipo].filter(Boolean).join(" / ")],
+      ["Ocurrencia", e.ocurrencia], ["Hecho", e.hecho], ["Causa", e.causa], ["Acción", e.accion], ["Producto", e.producto], ["Usuario", e.usuario]];
+    if (e.dur > (s.m1 - s.m0) + 0.01) filas.unshift(["Evento completo", `${fmtHora(e.ini)} · ${fmtMin(e.dur)}`]);
+    html += filas.filter(x => x[1]).map(([k, v]) => `<div><span class="k">${k}:</span> ${esc(v)}</div>`).join("");
+  } else if (s.tipo === "prod") html += `<div class="k">Sin declaración: tren disponible</div>`;
+  else if (s.tipo === "sinreg") html += `<div class="k">Posterior al último registro del archivo</div>`;
+  tip.innerHTML = html; tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(ev.clientX + 14, innerWidth - w - 8) + "px";
+  tip.style.top = (ev.clientY + 16 + h > innerHeight ? ev.clientY - h - 12 : ev.clientY + 16) + "px";
+});
+$("chart").addEventListener("mouseleave", () => tip.style.display = "none");
+$("chart").addEventListener("click", ev => {
+  const g = ev.target.closest(".row");
+  if (!g) return;
+  const f = filasMes[+g.dataset.i];
+  S.diaSel = S.diaSel && S.diaSel.getTime() === f.fecha.getTime() ? null : f.fecha;
+  render();
+  if (S.diaSel && innerWidth < 900) $("detTitle").scrollIntoView({ behavior: "smooth" });
+});
+
+function seg(id, key) {
+  $(id).querySelectorAll("button").forEach(b => b.onclick = () => {
+    $(id).querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    S[key] = b.dataset.v; if (key === "modo") S.resaltadas.clear(); render();
+  });
+}
+seg("dias", "dias"); seg("modo", "modo"); seg("orden", "orden");
+$("mes").onchange = () => { S.mes = $("mes").value; S.diaSel = null; render(); };
+const leerHora = (v, def) => { const m = /^(\d{1,2}):(\d{2})/.exec(v); return m ? +m[1] * 60 + +m[2] : def; };
+function horas() {
+  let d = leerHora($("desde").value, 0), h = leerHora($("hasta").value, 1440);
+  if (h === 1439) h = 1440;
+  if (h <= d) h = Math.min(1440, d + 30);
+  S.desde = d; S.hasta = h; render();
+}
+$("desde").onchange = horas; $("hasta").onchange = horas;
+
+function cargar(texto, nombre) {
+  try { S.eventos = leerEventos(texto); }
+  catch (e) { alert(e.message); return; }
+  S.nombre = nombre; S.diaSel = null; S.resaltadas.clear();
+  const meses = [...new Set(S.eventos.map(e => `${e.ini.getFullYear()}-${pad(e.ini.getMonth() + 1)}`))].sort();
+  $("mes").innerHTML = meses.map(k => { const [y, m] = k.split("-"); return `<option value="${k}">${MESES[m - 1]} ${y}</option>`; }).join("");
+  S.mes = meses[meses.length - 1]; $("mes").value = S.mes;
+  render();
+}
+$("btnFile").onclick = () => $("file").click();
+$("file").onchange = () => {
+  const f = $("file").files[0]; if (!f) return;
+  f.text().then(t => cargar(t, f.name));
+};
+addEventListener("dragover", e => { e.preventDefault(); document.body.classList.add("drop"); });
+addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("drop"); });
+addEventListener("drop", e => {
+  e.preventDefault(); document.body.classList.remove("drop");
+  const f = e.dataTransfer.files[0]; if (f) f.text().then(t => cargar(t, f.name));
+});
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderChart, 120); });
+
+if (CSV_INICIAL) cargar(CSV_INICIAL, NOMBRE_INICIAL); else render();
+</script>
+</body>
+</html>

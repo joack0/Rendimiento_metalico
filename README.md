@@ -38,3 +38,21 @@ Ordenes: si se corrige una orden ahí, todo se recalcula.
 - **Actuar ya:** está dentro del 80 % y tiene una brecha ≥ 2 pp o estuvo bajo meta en ≥ 2 de las 4 semanas previas.
 - **Plan de mejora:** está dentro del 80 %, pero no cumple lo anterior.
 - **Monitorear:** está fuera del 80 %.
+
+## Timeline de planta
+
+```bash
+python3 scripts/preparar_timeline.py [datos/Hecho_causa_accion.csv]
+```
+
+Genera `dashboard/timeline.html`: una fila por día del mes (00:00 → 24:00) con lo que pasó en el tren.
+Trae el CSV incrustado y además permite cargar otro desde el navegador (botón "Cargar CSV…" o arrastrándolo).
+
+- Cada declaración ocupa de `Fecha_Inicio` a `Fecha_Inicio + DuracionMinutos`; si cruza la medianoche se reparte entre ambos días.
+- Sin declaración ni minutos = tren disponible / en producción (verde).
+- Tipo: Parada programada (azul), Parada padrón (morado) y Libre (gris) según `Disciplina`; Retraso (naranjo) si `Zona`,
+  `Equipo` u `Ocurrencia` dicen "retraso"; el resto es Interrupción/falla (rojo). Con "Colorear por: Disciplina" cada
+  falla toma el color de su disciplina (Mecánica, Electrónica, Operación…).
+- % prod. de cada día = minutos de producción / minutos con programa (excluye Libre y Sin registro) dentro de la ventana horaria.
+- Después del fin de la última declaración del archivo el tiempo queda como "Sin registro".
+- Filtros: mes, ventana horaria (ej. 17:00 → 23:00), L-V / Sáb-Dom. Clic en un día muestra su detalle; clic en la leyenda resalta una categoría.
