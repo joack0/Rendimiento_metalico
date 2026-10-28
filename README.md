@@ -57,7 +57,8 @@ regenera y abre la página).
 - **Cargar CSV…** o arrastrar archivos: se agregan y quedan guardados en ese navegador, así se pueden juntar varios meses.
 - **Carpeta `datos/interrupciones/`**: dejar ahí cada exportación y correr el script (o el `.bat`).
 - Si dos archivos cubren las mismas fechas, manda el último cargado (o el de fecha de modificación más nueva); así no se
-  duplican declaraciones al volver a exportar el mes. La tabla "Datos cargados" muestra qué cubre cada archivo y permite quitarlo.
+  duplican declaraciones al volver a exportar el mes. La tabla "Datos cargados" muestra qué cubre cada archivo y permite quitar cualquiera (también el incluido en la página),
+  por ejemplo para ver solo el CSV del mes pasado.
 
 ### Reglas
 

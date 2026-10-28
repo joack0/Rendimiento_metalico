@@ -625,9 +625,12 @@ async function agregarLote(texto, nombre, origen = "cargado") {
   aplicar();
 }
 
+let quitados = []; // nombres de archivos incluidos en la página que el usuario quitó
+
 async function quitarLote(i) {
   const l = lotes[i];
   if (l.origen === "vinculado") await desvincular(false);
+  if (l.origen === "incrustado") { quitados.push(l.nombre); await DB.set("quitados", quitados); }
   lotes.splice(i, 1);
   await guardarLotes();
   aplicar();
@@ -643,8 +646,14 @@ function renderLotes(info) {
       <td>${esc(l.nombre)}</td><td>${etiqueta[l.origen]}</td>
       <td>${error ? `<span style="color:var(--c-falla)">${esc(error)}</span>` : n ? `${fmtFecha(desde)} → ${fmtFecha(hasta)}` : "—"}</td>
       <td class="n">${n ?? "—"}</td><td>${fmtFechaHora(l.cargado)}</td>
-      <td>${l.origen === "incrustado" ? "" : `<button data-q="${lotes.indexOf(l)}" title="Quitar este archivo">Quitar</button>`}</td></tr>`).join("")}</tbody></table>`
+      <td><button data-q="${lotes.indexOf(l)}" title="Dejar de mostrar este archivo">Quitar</button></td></tr>`).join("")}</tbody></table>`
     : `<p class="muted">Aún no hay datos.</p>`;
+  if (quitados.length) $("lotes").innerHTML += `<p class="muted" style="margin:10px 0 0">Ocultos: ${esc(quitados.join(", "))} · <button id="btnRestaurar">Volver a mostrarlos</button></p>`;
+  if ($("btnRestaurar")) $("btnRestaurar").onclick = async () => {
+    quitados = []; await DB.del("quitados");
+    lotes = lotes.concat(CSV_INICIAL.filter(c => !lotes.some(l => l.origen === "incrustado" && l.nombre === c.nombre)).map(c => ({ ...c, origen: "incrustado" })));
+    aplicar();
+  };
   $("lotes").querySelectorAll("button[data-q]").forEach(b => b.onclick = () => quitarLote(+b.dataset.q));
 }
 
@@ -733,7 +742,9 @@ addEventListener("drop", async e => {
 let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderChart, 120); });
 
 (async () => {
-  lotes = CSV_INICIAL.map(c => ({ ...c, origen: "incrustado" }));
+  const q = await DB.get("quitados");
+  if (Array.isArray(q)) quitados = q;
+  lotes = CSV_INICIAL.filter(c => !quitados.includes(c.nombre)).map(c => ({ ...c, origen: "incrustado" }));
   const guardados = await DB.get("lotes");
   if (Array.isArray(guardados)) lotes.push(...guardados);
   aplicar();
