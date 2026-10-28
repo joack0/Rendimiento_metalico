@@ -130,6 +130,7 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowra
 .bars .fill { height: 100%; border-radius: 0 3px 3px 0; }
 .muted { color: var(--text-3); }
 .drop { outline: 2px dashed var(--accent); outline-offset: -8px; }
+.estado { flex-basis: 100%; font-size: 12.5px; color: var(--text-2); }
 .empty { padding: 40px; text-align: center; color: var(--text-2); }
 </style>
 </head>
@@ -158,9 +159,13 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowra
       </span>
     </label>
     <label class="file"><span>&nbsp;</span>
-      <button type="button" id="btnFile">Cargar CSV…</button>
-      <input type="file" id="file" accept=".csv,text/csv">
+      <span style="display:flex;gap:8px">
+        <button type="button" id="btnVincular" title="Elige el CSV una vez; la página lo vuelve a leer cada vez que se abre y cada minuto">Vincular CSV…</button>
+        <button type="button" id="btnFile" title="Agrega uno o varios CSV (se recuerdan en este navegador)">Cargar CSV…</button>
+      </span>
+      <input type="file" id="file" accept=".csv,text/csv" multiple>
     </label>
+    <div class="estado" id="vinculoEstado"></div>
   </div>
 
   <div class="kpis" id="kpis"></div>
@@ -181,12 +186,18 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowra
       <div class="bars" id="bars"></div>
     </div>
   </div>
+
+  <div class="card">
+    <h2>Datos cargados</h2>
+    <p class="muted" style="margin:-4px 0 10px;font-size:12.5px">Los archivos se recuerdan en este navegador. Si dos archivos cubren las mismas fechas, manda el último cargado.</p>
+    <div class="tbl-wrap" id="lotes"></div>
+  </div>
 </main>
 <div id="tip"></div>
 
 <script>
+// CSV incluidos al generar la página: [{nombre, cargado (ms), texto}]
 const CSV_INICIAL = __CSV__;
-const NOMBRE_INICIAL = __NOMBRE__;
 
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -268,7 +279,7 @@ function leerEventos(texto) {
 }
 
 // ---------- estado ----------
-const S = { eventos: [], nombre: "", mes: null, desde: 0, hasta: 1440, dias: "todos", modo: "tipo", orden: "desc", resaltadas: new Set(), diaSel: null };
+const S = { eventos: [], cobertura: [], nombre: "", mes: null, desde: 0, hasta: 1440, dias: "todos", modo: "tipo", orden: "desc", resaltadas: new Set(), diaSel: null };
 let filasMes = [];
 
 const $ = id => document.getElementById(id);
@@ -296,21 +307,28 @@ function infoClave(k) {
   return TIPOS[k];
 }
 
-// Segmentos de un día (minutos desde 00:00), rellenando los huecos con producción.
-function segmentosDia(fecha, finDatos) {
+// Segmentos de un día (minutos desde 00:00). Los huecos sin declaración son producción si
+// algún archivo cubre ese tramo, y "Sin registro" si no.
+function segmentosDia(fecha) {
   const d0 = fecha.getTime(), d1 = d0 + 86400000;
-  const corte = Math.min(d1, Math.max(d0, finDatos));
   const segs = []; let cursor = d0;
+  const hueco = (a, b) => {
+    for (const [c0, c1] of S.cobertura) {
+      if (c1 <= a || c0 >= b) continue;
+      if (c0 > a) segs.push({ tipo: "sinreg", a, b: c0 });
+      segs.push({ tipo: "prod", a: Math.max(a, c0), b: Math.min(b, c1) });
+      a = Math.min(b, c1);
+    }
+    if (a < b) segs.push({ tipo: "sinreg", a, b });
+  };
   for (const ev of S.eventos) {
     if (ev.fin <= d0 || ev.ini >= d1 || ev.dur <= 0) continue;
     const a = Math.max(ev.ini.getTime(), d0), b = Math.min(ev.fin.getTime(), d1);
-    if (a > cursor) segs.push({ tipo: "prod", a: cursor, b: Math.min(a, corte) });
+    if (a > cursor) hueco(cursor, a);
     segs.push({ tipo: ev.tipo, ev, a: Math.max(a, cursor), b });
     cursor = Math.max(cursor, b);
   }
-  if (cursor < corte) segs.push({ tipo: "prod", a: cursor, b: corte });
-  cursor = Math.max(cursor, corte);
-  if (cursor < d1) segs.push({ tipo: "sinreg", a: cursor, b: d1 });
+  if (cursor < d1) hueco(cursor, d1);
   return segs
     .filter(s => s.b > s.a)
     .map(s => ({ ...s, m0: (s.a - d0) / 60000, m1: (s.b - d0) / 60000 }));
@@ -318,7 +336,6 @@ function segmentosDia(fecha, finDatos) {
 
 function construirMes() {
   const [y, m] = S.mes.split("-").map(Number);
-  const finDatos = S.eventos.reduce((mx, e) => Math.max(mx, e.fin.getTime()), 0);
   const n = new Date(y, m, 0).getDate();
   filasMes = [];
   for (let d = 1; d <= n; d++) {
@@ -326,7 +343,7 @@ function construirMes() {
     const dow = fecha.getDay();
     if (S.dias === "lv" && (dow === 0 || dow === 6)) continue;
     if (S.dias === "sd" && dow >= 1 && dow <= 5) continue;
-    filasMes.push({ fecha, dow, segs: segmentosDia(fecha, finDatos) });
+    filasMes.push({ fecha, dow, segs: segmentosDia(fecha) });
   }
   if (S.orden === "desc") filasMes.reverse();
 }
@@ -337,7 +354,7 @@ function enVentana(s) { return Math.max(0, Math.min(s.m1, S.hasta) - Math.max(s.
 // ---------- render ----------
 function render() {
   if (!S.eventos.length) {
-    $("chart").innerHTML = `<div class="empty">Carga el CSV de “Hecho causa acción” con el botón <b>Cargar CSV…</b> o arrástralo a esta página.</div>`;
+    $("chart").innerHTML = `<div class="empty">Carga el CSV de “Hecho causa acción” con <b>Vincular CSV…</b> (se actualiza solo), <b>Cargar CSV…</b> o arrastrándolo a esta página.</div>`;
     $("kpis").innerHTML = ""; $("legend").innerHTML = ""; $("bars").innerHTML = ""; $("ctitle").textContent = "";
     return;
   }
@@ -489,7 +506,7 @@ $("chart").addEventListener("mousemove", ev => {
     if (e.dur > (s.m1 - s.m0) + 0.01) filas.unshift(["Evento completo", `${fmtHora(e.ini)} · ${fmtMin(e.dur)}`]);
     html += filas.filter(x => x[1]).map(([k, v]) => `<div><span class="k">${k}:</span> ${esc(v)}</div>`).join("");
   } else if (s.tipo === "prod") html += `<div class="k">Sin declaración: tren disponible</div>`;
-  else if (s.tipo === "sinreg") html += `<div class="k">Posterior al último registro del archivo</div>`;
+  else if (s.tipo === "sinreg") html += `<div class="k">Ningún archivo cargado cubre este tramo</div>`;
   tip.innerHTML = html; tip.style.display = "block";
   const w = tip.offsetWidth, h = tip.offsetHeight;
   tip.style.left = Math.min(ev.clientX + 14, innerWidth - w - 8) + "px";
@@ -522,29 +539,206 @@ function horas() {
 }
 $("desde").onchange = horas; $("hasta").onchange = horas;
 
-function cargar(texto, nombre) {
-  try { S.eventos = leerEventos(texto); }
-  catch (e) { alert(e.message); return; }
-  S.nombre = nombre; S.diaSel = null; S.resaltadas.clear();
-  const meses = [...new Set(S.eventos.map(e => `${e.ini.getFullYear()}-${pad(e.ini.getMonth() + 1)}`))].sort();
+// ---------- datos: lotes guardados en el navegador ----------
+// Cada CSV cargado es un "lote". Al combinarlos, el lote más reciente reemplaza a los
+// anteriores en el rango de fechas que cubre; así se pueden juntar varios meses y
+// volver a cargar el mismo mes con más días sin duplicar declaraciones.
+const DB = {
+  abrir() {
+    if (this.p) return this.p;
+    this.p = new Promise(res => {
+      try {
+        const r = indexedDB.open("timeline-planta", 1);
+        r.onupgradeneeded = () => r.result.createObjectStore("kv");
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => res(null);
+      } catch (e) { res(null); }
+    });
+    return this.p;
+  },
+  async get(k) {
+    const db = await this.abrir(); if (!db) return undefined;
+    return new Promise(res => { const r = db.transaction("kv").objectStore("kv").get(k); r.onsuccess = () => res(r.result); r.onerror = () => res(undefined); });
+  },
+  async set(k, v) {
+    const db = await this.abrir(); if (!db) return;
+    return new Promise(res => {
+      try { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = t.onerror = () => res(); }
+      catch (e) { res(); } // p. ej. el navegador no permite guardar el acceso al archivo
+    });
+  },
+  async del(k) {
+    const db = await this.abrir(); if (!db) return;
+    return new Promise(res => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").delete(k); t.oncomplete = t.onerror = () => res(); });
+  },
+};
+
+let lotes = []; // {nombre, cargado (ms), texto, origen: "incrustado" | "cargado" | "vinculado"}
+
+function combinar() {
+  let evs = [], cob = [];
+  const info = [];
+  for (const l of [...lotes].sort((a, b) => a.cargado - b.cargado)) {
+    let nuevos;
+    try { nuevos = leerEventos(l.texto); } catch (e) { info.push({ l, error: e.message }); continue; }
+    if (!nuevos.length) { info.push({ l, n: 0 }); continue; }
+    const a = new Date(nuevos[0].ini); a.setHours(0, 0, 0, 0);
+    const b = nuevos.reduce((mx, e) => Math.max(mx, e.ini.getTime()), 0);
+    evs = evs.filter(e => e.ini < a || e.ini.getTime() > b).concat(nuevos);
+    cob.push([a.getTime(), nuevos.reduce((mx, e) => Math.max(mx, e.fin.getTime()), 0)]);
+    info.push({ l, n: nuevos.length, desde: a, hasta: new Date(b) });
+  }
+  evs.sort((x, y) => x.ini - y.ini);
+  // unir los tramos cubiertos por los archivos
+  cob.sort((x, y) => x[0] - y[0]);
+  const cobertura = [];
+  for (const [c0, c1] of cob) {
+    const u = cobertura[cobertura.length - 1];
+    if (u && c0 <= u[1]) u[1] = Math.max(u[1], c1); else cobertura.push([c0, c1]);
+  }
+  return { evs, info, cobertura };
+}
+
+function aplicar() {
+  const { evs, info, cobertura } = combinar();
+  S.cobertura = cobertura;
+  const mesPrevio = S.mes;
+  S.eventos = evs; S.diaSel = null;
+  S.nombre = lotes.length === 1 ? lotes[0].nombre : `${lotes.length} archivos`;
+  const meses = [...new Set(evs.map(e => `${e.ini.getFullYear()}-${pad(e.ini.getMonth() + 1)}`))].sort();
   $("mes").innerHTML = meses.map(k => { const [y, m] = k.split("-"); return `<option value="${k}">${MESES[m - 1]} ${y}</option>`; }).join("");
-  S.mes = meses[meses.length - 1]; $("mes").value = S.mes;
+  S.mes = meses.includes(mesPrevio) ? mesPrevio : meses[meses.length - 1];
+  if (S.mes) $("mes").value = S.mes;
+  renderLotes(info);
   render();
 }
+
+async function guardarLotes() {
+  await DB.set("lotes", lotes.filter(l => l.origen !== "incrustado"));
+}
+
+async function agregarLote(texto, nombre, origen = "cargado") {
+  try { leerEventos(texto); } catch (e) { alert(`${nombre}: ${e.message}`); return; }
+  lotes = lotes.filter(l => l.nombre !== nombre || l.origen === "incrustado");
+  lotes.push({ nombre, texto, cargado: Date.now(), origen });
+  await guardarLotes();
+  aplicar();
+}
+
+async function quitarLote(i) {
+  const l = lotes[i];
+  if (l.origen === "vinculado") await desvincular(false);
+  lotes.splice(i, 1);
+  await guardarLotes();
+  aplicar();
+}
+
+const fmtFecha = d => `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+const fmtFechaHora = ms => { const d = new Date(ms); return `${fmtFecha(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+function renderLotes(info) {
+  const etiqueta = { incrustado: "incluido en la página", cargado: "cargado", vinculado: "vinculado (se actualiza solo)" };
+  $("lotes").innerHTML = info.length ? `<table><thead><tr><th>Archivo</th><th>Origen</th><th>Cubre</th><th class="n">Declaraciones</th><th>Cargado</th><th></th></tr></thead><tbody>${
+    info.map(({ l, n, desde, hasta, error }) => `<tr>
+      <td>${esc(l.nombre)}</td><td>${etiqueta[l.origen]}</td>
+      <td>${error ? `<span style="color:var(--c-falla)">${esc(error)}</span>` : n ? `${fmtFecha(desde)} → ${fmtFecha(hasta)}` : "—"}</td>
+      <td class="n">${n ?? "—"}</td><td>${fmtFechaHora(l.cargado)}</td>
+      <td>${l.origen === "incrustado" ? "" : `<button data-q="${lotes.indexOf(l)}" title="Quitar este archivo">Quitar</button>`}</td></tr>`).join("")}</tbody></table>`
+    : `<p class="muted">Aún no hay datos.</p>`;
+  $("lotes").querySelectorAll("button[data-q]").forEach(b => b.onclick = () => quitarLote(+b.dataset.q));
+}
+
+// ---------- archivo vinculado (Chrome / Edge) ----------
+// Se guarda el acceso al archivo; cada vez que se abre la página y cada minuto mientras
+// está abierta, se vuelve a leer si cambió. Basta con sobrescribir ese CSV con la nueva exportación.
+const vinculo = { handle: null, mod: 0, timer: null };
+const soportaVinculo = "showOpenFilePicker" in window;
+
+function estadoVinculo(txt, boton) {
+  $("vinculoEstado").innerHTML = txt;
+  $("btnVincular").textContent = boton;
+}
+
+async function leerVinculado(forzar) {
+  if (!vinculo.handle) return;
+  try {
+    const f = await vinculo.handle.getFile();
+    if (forzar || f.lastModified !== vinculo.mod) {
+      vinculo.mod = f.lastModified;
+      await agregarLote(await f.text(), f.name, "vinculado");
+    }
+    estadoVinculo(`Vinculado a <b>${esc(f.name)}</b> · modificado ${fmtFechaHora(f.lastModified)} · revisado ${fmtFechaHora(Date.now())}`, "Cambiar archivo vinculado…");
+  } catch (e) {
+    estadoVinculo(`No se pudo leer <b>${esc(vinculo.handle.name)}</b> (¿se movió o renombró?). Vuelve a vincularlo.`, "Vincular CSV…");
+  }
+}
+
+function iniciarRevision() {
+  clearInterval(vinculo.timer);
+  vinculo.timer = setInterval(() => leerVinculado(false), 60000);
+}
+
+async function vincular() {
+  if (!soportaVinculo) { alert("Vincular un archivo funciona en Chrome o Edge. En otro navegador usa Cargar CSV…"); return; }
+  // Si ya hay un archivo guardado pero sin permiso, solo pedir permiso (requiere clic).
+  if (vinculo.handle && $("btnVincular").dataset.reconectar) {
+    if (await vinculo.handle.requestPermission({ mode: "read" }) === "granted") {
+      delete $("btnVincular").dataset.reconectar;
+      await leerVinculado(true); iniciarRevision();
+    }
+    return;
+  }
+  let h;
+  try { [h] = await showOpenFilePicker({ types: [{ description: "CSV", accept: { "text/csv": [".csv"] } }] }); }
+  catch (e) { return; }
+  vinculo.handle = h; vinculo.mod = 0;
+  await DB.set("handle", h);
+  await leerVinculado(true); iniciarRevision();
+}
+
+async function desvincular(refrescar = true) {
+  clearInterval(vinculo.timer);
+  vinculo.handle = null;
+  await DB.del("handle");
+  estadoVinculo("Sin archivo vinculado.", "Vincular CSV…");
+  if (refrescar) aplicar();
+}
+
+async function restaurarVinculo() {
+  if (!soportaVinculo) { estadoVinculo("Para que se actualice solo, abre esta página en Chrome o Edge.", "Vincular CSV…"); return; }
+  const h = await DB.get("handle");
+  if (!h) { estadoVinculo("Sin archivo vinculado.", "Vincular CSV…"); return; }
+  vinculo.handle = h;
+  let p = "prompt";
+  try { p = await h.queryPermission({ mode: "read" }); } catch (e) { /* sin permiso */ }
+  if (p === "granted") { await leerVinculado(false); iniciarRevision(); }
+  else {
+    $("btnVincular").dataset.reconectar = "1";
+    estadoVinculo(`Archivo vinculado: <b>${esc(h.name)}</b>. El navegador pide confirmar el acceso: haz clic en <b>Reconectar</b>.`, "Reconectar");
+  }
+}
+
+$("btnVincular").onclick = vincular;
 $("btnFile").onclick = () => $("file").click();
-$("file").onchange = () => {
-  const f = $("file").files[0]; if (!f) return;
-  f.text().then(t => cargar(t, f.name));
+$("file").onchange = async () => {
+  for (const f of $("file").files) await agregarLote(await f.text(), f.name);
+  $("file").value = "";
 };
 addEventListener("dragover", e => { e.preventDefault(); document.body.classList.add("drop"); });
 addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("drop"); });
-addEventListener("drop", e => {
+addEventListener("drop", async e => {
   e.preventDefault(); document.body.classList.remove("drop");
-  const f = e.dataTransfer.files[0]; if (f) f.text().then(t => cargar(t, f.name));
+  for (const f of e.dataTransfer.files) await agregarLote(await f.text(), f.name);
 });
 let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderChart, 120); });
 
-if (CSV_INICIAL) cargar(CSV_INICIAL, NOMBRE_INICIAL); else render();
+(async () => {
+  lotes = CSV_INICIAL.map(c => ({ ...c, origen: "incrustado" }));
+  const guardados = await DB.get("lotes");
+  if (Array.isArray(guardados)) lotes.push(...guardados);
+  aplicar();
+  await restaurarVinculo();
+})();
 </script>
 </body>
 </html>
