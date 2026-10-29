@@ -3,22 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Timeline de planta</title>
+<title>Timeline de planta AZA</title>
 <style>
 :root {
   color-scheme: light;
-  --bg: #f6f6f4;
+  --aza-azul: #1d4f9e;
+  --aza-verde: #6ab42d;
+  --aza-gris: #3c3c3b;
+  --on-azul: #ffffff;
+  --bg: #f3f5f9;
   --surface: #ffffff;
-  --border: #e2e1dc;
-  --grid: #ecebe6;
-  --text: #1a1a19;
-  --text-2: #55544f;
-  --text-3: #8a8983;
-  --accent: #1565c0;
-  --hover: rgba(0,0,0,.04);
-  --sel: rgba(21,101,192,.10);
-  --c-prod: #2e7d32;
-  --c-prog: #1565c0;
+  --border: #dde2ea;
+  --grid: #e9ecf2;
+  --text: #1f2430;
+  --text-2: #4f5563;
+  --text-3: #858b98;
+  --accent: var(--aza-azul);
+  --hover: rgba(29,79,158,.05);
+  --sel: rgba(29,79,158,.10);
+  --c-prod: #5ea52a;
+  --c-prog: #1d4f9e;
   --c-padron: #7b1fa2;
   --c-falla: #d32f2f;
   --c-retraso: #ef6c00;
@@ -29,18 +33,22 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #121211;
-    --surface: #1c1c1b;
-    --border: #33332f;
-    --grid: #2a2a27;
-    --text: #f0efec;
-    --text-2: #c3c2b7;
-    --text-3: #8f8e86;
-    --accent: #5aa2f0;
+    --aza-azul: #4f86d6;
+    --aza-verde: #7cc242;
+    --aza-gris: #d6d6d4;
+    --on-azul: #ffffff;
+    --bg: #10141b;
+    --surface: #191f29;
+    --border: #2d3644;
+    --grid: #242c38;
+    --text: #eef1f6;
+    --text-2: #bcc3cf;
+    --text-3: #8790a0;
+    --accent: var(--aza-azul);
     --hover: rgba(255,255,255,.05);
-    --sel: rgba(90,162,240,.16);
-    --c-prod: #3d9a42;
-    --c-prog: #3b82e0;
+    --sel: rgba(79,134,214,.18);
+    --c-prod: #5ea52a;
+    --c-prog: #3f7ad0;
     --c-padron: #a35ed0;
     --c-falla: #e5534b;
     --c-retraso: #f08a24;
@@ -51,18 +59,22 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #121211;
-  --surface: #1c1c1b;
-  --border: #33332f;
-  --grid: #2a2a27;
-  --text: #f0efec;
-  --text-2: #c3c2b7;
-  --text-3: #8f8e86;
-  --accent: #5aa2f0;
+  --aza-azul: #4f86d6;
+  --aza-verde: #7cc242;
+  --aza-gris: #d6d6d4;
+  --on-azul: #ffffff;
+  --bg: #10141b;
+  --surface: #191f29;
+  --border: #2d3644;
+  --grid: #242c38;
+  --text: #eef1f6;
+  --text-2: #bcc3cf;
+  --text-3: #8790a0;
+  --accent: var(--aza-azul);
   --hover: rgba(255,255,255,.05);
-  --sel: rgba(90,162,240,.16);
-  --c-prod: #3d9a42;
-  --c-prog: #3b82e0;
+  --sel: rgba(79,134,214,.18);
+  --c-prod: #5ea52a;
+  --c-prog: #3f7ad0;
   --c-padron: #a35ed0;
   --c-falla: #e5534b;
   --c-retraso: #f08a24;
@@ -77,6 +89,12 @@ body {
   font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 main { max-width: 1500px; margin: 0 auto; padding: 20px 16px 48px; }
+.marca { background: var(--aza-azul); color: var(--on-azul); border-bottom: 4px solid var(--aza-verde); }
+.marca div { max-width: 1500px; margin: 0 auto; padding: 14px 16px 12px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.marca .logo { font-weight: 800; font-size: 26px; letter-spacing: .5px; }
+.marca .logo span { color: var(--aza-verde); }
+.marca h1 { font-size: 20px; font-weight: 600; margin: 0; }
+.marca .lema { font-size: 13px; opacity: .85; margin-left: auto; }
 h1 { font-size: 22px; margin: 0 0 2px; }
 .sub { color: var(--text-2); margin: 0 0 16px; font-size: 13px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
@@ -91,7 +109,10 @@ button:hover { background: var(--hover); }
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .seg button { border: 0; border-radius: 0; border-right: 1px solid var(--border); }
 .seg button:last-child { border-right: 0; }
-.seg button.on { background: var(--sel); color: var(--accent); font-weight: 600; }
+.seg button.on { background: var(--aza-azul); color: var(--on-azul); font-weight: 600; }
+.btn-prim { background: var(--aza-azul); color: var(--on-azul); border-color: var(--aza-azul); font-weight: 600; }
+.btn-prim:hover { background: var(--aza-azul); filter: brightness(1.1); }
+.btn-sec { border-color: var(--aza-verde); color: var(--text); font-weight: 600; }
 .file { margin-left: auto; }
 .file input { display: none; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
@@ -103,7 +124,7 @@ button:hover { background: var(--hover); }
 .legend button { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; font-size: 12.5px; }
 .legend button .m { color: var(--text-3); }
 .legend button.off { opacity: .4; }
-.chart-title { text-align: center; font-size: 18px; font-weight: 650; margin: 2px 0 8px; }
+.chart-title { text-align: center; font-size: 18px; font-weight: 650; margin: 2px 0 8px; color: var(--aza-azul); }
 #chart { width: 100%; position: relative; }
 #chart svg { display: block; width: 100%; }
 #chart .row:hover .rowbg { fill: var(--hover); }
@@ -123,7 +144,22 @@ button:hover { background: var(--hover); }
 #tip .k { color: var(--text-3); }
 .split { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
 @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
-h2 { font-size: 15px; margin: 0 0 10px; }
+h2 { font-size: 15px; margin: 0 0 10px; color: var(--aza-azul); }
+.kpi { border-top: 3px solid var(--aza-azul); }
+.kpi:first-child { border-top-color: var(--aza-verde); }
+th.s { cursor: pointer; user-select: none; }
+th.s:hover { color: var(--aza-azul); }
+th.s.on { color: var(--aza-azul); }
+th.s .fl { font-size: 10px; margin-left: 3px; }
+#tablaDet tbody tr { cursor: pointer; }
+#tablaDet tbody tr:hover { background: var(--hover); }
+.det-ctrl { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; margin-bottom: 10px; }
+.det-ctrl label { display: flex; flex-direction: column; font-size: 12px; color: var(--text-2); gap: 3px; }
+.det-ctrl label.chk { flex-direction: row; align-items: center; gap: 6px; font-size: 12.5px; }
+.alcance { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; font-size: 13px; color: var(--text-2); }
+.alcance b { color: var(--aza-azul); }
+.bars { columns: 2 320px; column-gap: 28px; }
+.bars .b { break-inside: avoid; }
 .tbl-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
 th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -148,8 +184,12 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowra
 </style>
 </head>
 <body>
-<main>
+<header class="marca"><div>
+  <span class="logo">AZA</span>
   <h1>Timeline de planta</h1>
+  <span class="lema">Acero Sostenible</span>
+</div></header>
+<main>
   <p class="sub" id="sub">Cada fila es un día. Sin declaración = tren disponible / en producción.</p>
 
   <div class="card controls">
@@ -186,8 +226,8 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowra
     </label>
     <label class="file"><span>&nbsp;</span>
       <span style="display:flex;gap:8px">
-        <button type="button" id="btnVincular" title="Elige el CSV una vez; la página lo vuelve a leer cada vez que se abre y cada minuto">Vincular CSV…</button>
-        <button type="button" id="btnFile" title="Agrega uno o varios CSV (se recuerdan en este navegador)">Cargar CSV…</button>
+        <button type="button" id="btnVincular" class="btn-sec" title="Elige el CSV una vez; la página lo vuelve a leer cada vez que se abre y cada minuto">Vincular CSV…</button>
+        <button type="button" id="btnFile" class="btn-prim" title="Agrega uno o varios CSV (se recuerdan en este navegador)">Cargar CSV…</button>
       </span>
       <input type="file" id="file" accept=".csv,text/csv" multiple>
     </label>
@@ -204,6 +244,7 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowra
     <div class="estado" id="filtroEstado"></div>
   </div>
 
+  <div class="alcance" id="alcance"></div>
   <div class="kpis" id="kpis"></div>
 
   <div class="card" style="margin-top:14px">
@@ -212,15 +253,20 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowra
     <div id="chart"></div>
   </div>
 
-  <div class="split">
-    <div class="card">
-      <h2 id="detTitle">Detalle del día</h2>
-      <div class="tbl-wrap" id="detalle"></div>
+  <div class="card">
+    <h2 id="detTitle">Interrupciones</h2>
+    <div class="det-ctrl">
+      <label>Día <select id="detDia"></select></label>
+      <label style="flex:1;min-width:200px">Buscar en la tabla <input type="search" id="detBuscar" placeholder="Equipo, ocurrencia, hecho, causa…" style="width:100%"></label>
+      <label class="chk"><input type="checkbox" id="detTodo"> Incluir paradas programadas y libre</label>
+      <span class="muted" id="detCuenta" style="font-size:12.5px"></span>
     </div>
-    <div class="card">
-      <h2>Minutos por categoría en el período</h2>
-      <div class="bars" id="bars"></div>
-    </div>
+    <div class="tbl-wrap" id="detalle"></div>
+  </div>
+
+  <div class="card">
+    <h2 id="barsTitle">Minutos por categoría</h2>
+    <div class="bars" id="bars"></div>
   </div>
 
   <div class="card">
@@ -470,21 +516,41 @@ function render() {
   const d0 = S.eventos[0].ini, d1 = S.eventos[S.eventos.length - 1].ini;
   $("sub").textContent = `${S.nombre ? S.nombre + " · " : ""}${fmtNum(S.eventos.length)} declaraciones del ${fmtFecha(d0)} al ${fmtFecha(d1)}. Cada fila es un día; sin declaración = tren disponible / en producción.`;
 
-  // Totales del mes por clave y por tipo
+  // Totales por clave y por tipo: del día elegido o de todo el período
+  const filasSel = filasAlcance();
   const tot = new Map(), totTipo = {};
-  for (const f of filasMes) for (const s of f.segs) {
+  for (const f of filasSel) for (const s of f.segs) {
     const mm = enVentana(s); if (!mm) continue;
     const k = claveSeg(s);
     tot.set(k, (tot.get(k) || 0) + mm);
     totTipo[s.tipo] = (totTipo[s.tipo] || 0) + mm;
   }
-  renderKpis(totTipo);
+  renderAlcance();
+  renderKpis(totTipo, filasSel);
   renderLegend(tot);
   renderChart();
   renderBars(tot);
   renderDetalle();
   renderFiltroEstado();
   renderResumen();
+}
+
+const diaElegido = () => S.diaSel && filasMes.find(r => r.fecha.getTime() === S.diaSel.getTime());
+const filasAlcance = () => { const f = diaElegido(); return f ? [f] : filasMes; };
+const nombreDia = f => `${DIAS[f.dow]} ${fmtFecha(f.fecha)}`;
+
+function renderAlcance() {
+  const f = diaElegido();
+  $("alcance").innerHTML = f
+    ? `Indicadores, tabla y minutos del día <b>${nombreDia(f)}</b> <button type="button" id="btnTodoPeriodo">Ver todo el período</button>`
+    : `Indicadores, tabla y minutos de <b>${esc(tituloPeriodo())}</b>. Haz clic en un día del gráfico (o elígelo en la tabla) para ver solo ese día.`;
+  if ($("btnTodoPeriodo")) $("btnTodoPeriodo").onclick = () => elegirDia(null);
+  $("barsTitle").textContent = f ? `Minutos por categoría · ${nombreDia(f)}` : "Minutos por categoría en el período";
+}
+
+function elegirDia(fecha) {
+  S.diaSel = fecha; S.detMostrarTodo = false;
+  render();
 }
 
 function renderFiltroEstado() {
@@ -514,29 +580,37 @@ function totalesDias(a, b) {
   return t;
 }
 
+const ordenRes = { col: "per", dir: -1 };
+
 function renderResumen() {
   const porSemana = S.agr === "semana";
-  const filas = porSemana
+  const periodos = porSemana
     ? S.semanas.map(k => { const a = new Date(+k); return { k, nombre: nombreSemana(a), a, b: sumarDias(a, 6) }; })
     : S.meses.map(k => { const [y, m] = k.split("-").map(Number); return { k, nombre: `${MESES[m - 1]} ${y}`, a: new Date(y, m - 1, 1), b: new Date(y, m, 0) }; });
   const actual = porSemana ? (S.vista === "semana" ? S.semana : null) : (S.vista === "mes" ? S.mes : null);
   const orden = ["prod", "falla", "retraso", "padron", "prog", "filtrada", "libre"];
   const h = v => v ? fmtNum(v / 60, 1) : "—";
-  $("resumen").innerHTML = `<table><thead><tr><th>${porSemana ? "Semana" : "Mes"}</th><th class="n">% prod.</th><th class="n">Prod. h</th>
-    <th class="n">Falla h</th><th class="n">Retraso h</th><th class="n">Padrón h</th><th class="n">Programada h</th><th class="n">Libre h</th>
-    <th class="n">N° fallas</th><th>Disciplina con más falla</th><th>Composición</th></tr></thead><tbody>${
-    filas.slice().reverse().map(f => {
-      const t = totalesDias(f.a, f.b), g = k => t.min[k] || 0;
-      const prog = g("prod") + g("falla") + g("retraso") + g("padron") + g("prog") + g("filtrada");
-      const total = orden.reduce((x, k) => x + g(k), 0) || 1;
-      const top = [...t.disc.entries()].sort((x, y) => y[1] - x[1])[0];
+  const filas = periodos.map(p => {
+    const t = totalesDias(p.a, p.b), g = k => t.min[k] || 0;
+    const prog = g("prod") + g("falla") + g("retraso") + g("padron") + g("prog") + g("filtrada");
+    const top = [...t.disc.entries()].sort((x, y) => y[1] - x[1])[0];
+    return { ...p, t, g, pct: prog ? g("prod") / prog * 100 : -1, nf: t.evs.size, top };
+  });
+  ordenar(filas, ordenRes, (f, c) => c === "per" ? f.a.getTime() : c === "pct" ? f.pct : c === "nf" ? f.nf : c === "top" ? (f.top ? f.top[1] : 0) : f.g(c));
+  $("resumen").innerHTML = `<table><thead><tr>${thOrden(ordenRes, "per", porSemana ? "Semana" : "Mes")}${thOrden(ordenRes, "pct", "% prod.", true)}
+    ${thOrden(ordenRes, "prod", "Prod. h", true)}${thOrden(ordenRes, "falla", "Falla h", true)}${thOrden(ordenRes, "retraso", "Retraso h", true)}
+    ${thOrden(ordenRes, "padron", "Padrón h", true)}${thOrden(ordenRes, "prog", "Programada h", true)}${thOrden(ordenRes, "libre", "Libre h", true)}
+    ${thOrden(ordenRes, "nf", "N° fallas", true)}${thOrden(ordenRes, "top", "Disciplina con más falla")}<th>Composición</th></tr></thead><tbody>${
+    filas.map(f => {
+      const g = f.g, total = orden.reduce((x, k) => x + g(k), 0) || 1;
       return `<tr data-k="${f.k}" class="${String(f.k) === String(actual) ? "actual" : ""}">
-        <td style="white-space:nowrap">${f.nombre}</td><td class="n"><b>${prog ? fmtNum(g("prod") / prog * 100, 1) + " %" : "—"}</b></td>
+        <td style="white-space:nowrap">${f.nombre}</td><td class="n"><b>${f.pct >= 0 ? fmtNum(f.pct, 1) + " %" : "—"}</b></td>
         <td class="n">${h(g("prod"))}</td><td class="n">${h(g("falla"))}</td><td class="n">${h(g("retraso"))}</td><td class="n">${h(g("padron"))}</td>
-        <td class="n">${h(g("prog"))}</td><td class="n">${h(g("libre"))}</td><td class="n">${t.evs.size || "—"}</td>
-        <td>${top ? `${esc(top[0])} <span class="muted">${fmtNum(top[1] / 60, 1)} h</span>` : "—"}</td>
+        <td class="n">${h(g("prog"))}</td><td class="n">${h(g("libre"))}</td><td class="n">${f.nf || "—"}</td>
+        <td>${f.top ? `${esc(f.top[0])} <span class="muted">${fmtNum(f.top[1] / 60, 1)} h</span>` : "—"}</td>
         <td><div class="mini">${orden.map(k => g(k) ? `<span style="width:${g(k) / total * 100}%;background:${TIPOS[k].color}" title="${TIPOS[k].nombre}: ${fmtNum(g(k) / 60, 1)} h"></span>` : "").join("")}</div></td></tr>`;
     }).join("")}</tbody></table>`;
+  clicOrden($("resumen"), ordenRes, renderResumen);
   $("resumen").querySelectorAll("tbody tr").forEach(tr => tr.onclick = () => {
     if (porSemana) { S.vista = "semana"; S.semana = tr.dataset.k; } else { S.vista = "mes"; S.mes = tr.dataset.k; }
     S.diaSel = null; sincronizarControles(); render();
@@ -544,12 +618,12 @@ function renderResumen() {
   });
 }
 
-function renderKpis(t) {
+function renderKpis(t, filas) {
   const g = k => t[k] || 0;
   const conPrograma = g("prod") + g("prog") + g("padron") + g("falla") + g("retraso") + g("filtrada");
   const disp = conPrograma ? g("prod") / conPrograma * 100 : 0;
   const nInt = new Set();
-  for (const f of filasMes) for (const s of f.segs) if (s.ev && (s.tipo === "falla" || s.tipo === "retraso") && enVentana(s)) nInt.add(s.ev);
+  for (const f of filas) for (const s of f.segs) if (s.ev && (s.tipo === "falla" || s.tipo === "retraso") && enVentana(s)) nInt.add(s.ev);
   const kp = [
     ["Producción / disponible", `${fmtNum(disp, 1)} %`, "var(--c-prod)", `${fmtNum(g("prod") / 60, 1)} h de ${fmtNum(conPrograma / 60, 1)} h con programa`],
     ["Interrupción/falla", `${fmtNum(g("falla") / 60, 1)} h`, "var(--c-falla)", `${nInt.size} eventos de falla o retraso`],
@@ -645,32 +719,75 @@ function renderBars(tot) {
   }).join("") || `<p class="muted">Sin interrupciones en el período.</p>`;
 }
 
+// Encabezado ordenable: clic alterna mayor→menor / menor→mayor
+function thOrden(estado, col, txt, num) {
+  const on = estado.col === col;
+  return `<th class="s${num ? " n" : ""}${on ? " on" : ""}" data-s="${col}" title="Ordenar">${txt}<span class="fl">${on ? (estado.dir < 0 ? "▼" : "▲") : "↕"}</span></th>`;
+}
+function ordenar(filas, estado, valor) {
+  return filas.sort((a, b) => {
+    const x = valor(a, estado.col), y = valor(b, estado.col);
+    return (typeof x === "string" ? x.localeCompare(y, "es") : x - y) * estado.dir;
+  });
+}
+function clicOrden(cont, estado, alCambiar) {
+  cont.querySelectorAll("th.s").forEach(th => th.onclick = () => {
+    const c = th.dataset.s;
+    if (estado.col === c) estado.dir = -estado.dir;
+    else { estado.col = c; estado.dir = ["min", "pct", "prod", "falla", "retraso", "padron", "prog", "libre", "nf", "top"].includes(c) ? -1 : 1; }
+    alCambiar();
+  });
+}
+
+const ordenDet = { col: "min", dir: -1 };
+const MAX_FILAS = 300;
+
 function renderDetalle() {
-  const f = S.diaSel && filasMes.find(r => r.fecha.getTime() === S.diaSel.getTime());
-  if (!f) {
-    $("detTitle").textContent = "Mayores interrupciones del período";
-    const evs = new Set();
-    for (const r of filasMes) for (const s of r.segs)
-      if (s.ev && !["prod", "sinreg", "libre", "prog", "filtrada"].includes(s.tipo) && enVentana(s)) evs.add(s.ev);
-    const top = [...evs].sort((a, b) => b.dur - a.dur).slice(0, 25);
-    $("detalle").innerHTML = (top.length ? `<p class="muted" style="margin:-4px 0 8px;font-size:12.5px">Las 25 más largas (sin paradas programadas). Clic en un día del gráfico para ver todo ese día.</p><table><thead><tr><th>Fecha</th><th>Inicio</th><th class="n">Min</th><th>Tipo</th><th>Disciplina</th><th>Zona / Equipo</th><th>Ocurrencia</th><th>Hecho</th></tr></thead><tbody>${
-      top.map(e => `<tr><td>${fmtDM(e.ini)} ${DIAS[e.ini.getDay()]}</td><td>${fmtHora(e.ini)}</td><td class="n">${fmtNum(e.dur, 2)}</td>
-        <td><span class="sw" style="background:${TIPOS[e.tipo].color};vertical-align:-1px"></span> ${esc(TIPOS[e.tipo].nombre)}</td>
-        <td>${esc(e.disciplina)}</td><td>${esc(e.zona)}${e.equipo ? " / " + esc(e.equipo) : ""}</td><td>${esc(e.ocurrencia)}</td><td>${esc(e.hecho)}</td></tr>`).join("")}</tbody></table>`
-      : `<p class="muted">Sin interrupciones en el período.</p>`);
+  // selector de días del período
+  const dias = [...filasMes].sort((a, b) => a.fecha - b.fecha);
+  $("detDia").innerHTML = `<option value="">Todo el período</option>` +
+    dias.map(f => `<option value="${f.fecha.getTime()}">${nombreDia(f)}</option>`).join("");
+  $("detDia").value = S.diaSel ? String(S.diaSel.getTime()) : "";
+
+  const f = diaElegido();
+  $("detTitle").textContent = f ? `Interrupciones · ${nombreDia(f)}` : `Interrupciones · ${tituloPeriodo()}`;
+  const excluir = $("detTodo").checked ? ["prod", "sinreg", "filtrada"] : ["prod", "sinreg", "filtrada", "prog", "libre"];
+  const evs = new Set();
+  for (const r of filasAlcance()) for (const s of r.segs)
+    if (s.ev && !excluir.includes(s.tipo) && enVentana(s)) evs.add(s.ev);
+  const q = norm($("detBuscar").value);
+  let filas = [...evs];
+  if (q) filas = filas.filter(e => norm([e.disciplina, e.zona, e.equipo, e.subequipo, e.ocurrencia, e.hecho, e.causa, e.accion, e.producto, TIPOS[e.tipo].nombre].join(" ")).includes(q));
+  const valor = (e, c) => ({
+    fecha: e.ini.getTime(), ini: e.ini.getHours() * 3600 + e.ini.getMinutes() * 60 + e.ini.getSeconds(), min: e.dur,
+    tipo: TIPOS[e.tipo].nombre, disc: e.disciplina, zona: e.zona, equipo: e.equipo, ocu: e.ocurrencia, hecho: e.hecho, causa: e.causa,
+  })[c];
+  ordenar(filas, ordenDet, valor);
+  const totalMin = filas.reduce((x, e) => x + e.dur, 0);
+  $("detCuenta").textContent = `${filas.length} declaraciones · ${fmtNum(totalMin)} min (${fmtNum(totalMin / 60, 1)} h)`;
+  if (!filas.length) {
+    $("detalle").innerHTML = `<p class="muted">${q ? "Nada coincide con la búsqueda." : f ? "Sin interrupciones en la ventana: el tren estuvo disponible." : "Sin interrupciones en el período."}</p>`;
     return;
   }
-  $("detTitle").textContent = `Detalle ${DIAS[f.dow]} ${pad(f.fecha.getDate())}-${pad(f.fecha.getMonth() + 1)}-${f.fecha.getFullYear()}`;
-  const evs = f.segs.filter(s => s.ev && enVentana(s));
-  if (!evs.length) { $("detalle").innerHTML = `<p class="muted">Sin declaraciones en la ventana: el tren estuvo disponible.</p>`; return; }
-  $("detalle").innerHTML = `<table><thead><tr><th>Inicio</th><th>Fin</th><th class="n">Min</th><th>Tipo</th><th>Disciplina</th><th>Zona / Equipo</th><th>Ocurrencia</th><th>Hecho</th></tr></thead><tbody>${
-    evs.map(s => {
-      const e = s.ev, i = infoClave(claveSeg(s));
-      return `<tr><td>${fmtHora(e.ini)}</td><td>${fmtHora(e.fin)}</td><td class="n">${fmtNum(e.dur, 2)}</td>
-        <td><span class="sw" style="background:${i.color};vertical-align:-1px"></span> ${esc(TIPOS[e.tipo].nombre)}</td>
-        <td>${esc(e.disciplina)}</td><td>${esc(e.zona)}${e.equipo ? " / " + esc(e.equipo) : ""}</td><td>${esc(e.ocurrencia)}</td><td>${esc(e.hecho)}</td></tr>`;
-    }).join("")}</tbody></table>`;
+  const visibles = S.detMostrarTodo ? filas : filas.slice(0, MAX_FILAS);
+  $("detalle").innerHTML = `<table id="tablaDet"><thead><tr>
+      ${thOrden(ordenDet, "fecha", "Fecha")}${thOrden(ordenDet, "ini", "Inicio")}${thOrden(ordenDet, "min", "Min", true)}${thOrden(ordenDet, "tipo", "Tipo")}
+      ${thOrden(ordenDet, "disc", "Disciplina")}${thOrden(ordenDet, "zona", "Zona")}${thOrden(ordenDet, "equipo", "Equipo")}
+      ${thOrden(ordenDet, "ocu", "Ocurrencia")}${thOrden(ordenDet, "hecho", "Hecho")}${thOrden(ordenDet, "causa", "Causa")}</tr></thead><tbody>${
+    visibles.map(e => `<tr data-dia="${new Date(e.ini.getFullYear(), e.ini.getMonth(), e.ini.getDate()).getTime()}" title="${f ? "" : "Clic: ver solo este día"}">
+      <td style="white-space:nowrap">${fmtDM(e.ini)} ${DIAS[e.ini.getDay()]}</td><td>${fmtHora(e.ini)}</td><td class="n"><b>${fmtNum(e.dur, 2)}</b></td>
+      <td style="white-space:nowrap"><span class="sw" style="background:${TIPOS[e.tipo].color};vertical-align:-1px"></span> ${esc(TIPOS[e.tipo].nombre)}</td>
+      <td>${esc(e.disciplina)}</td><td>${esc(e.zona)}</td><td>${esc([e.equipo, e.subequipo].filter(Boolean).join(" / "))}</td>
+      <td>${esc(e.ocurrencia)}</td><td>${esc(e.hecho)}</td><td>${esc(e.causa)}</td></tr>`).join("")}</tbody></table>${
+    filas.length > visibles.length ? `<p style="margin:10px 0 0"><button type="button" id="btnMasFilas">Mostrar las ${filas.length} filas</button></p>` : ""}`;
+  clicOrden($("detalle"), ordenDet, renderDetalle);
+  if ($("btnMasFilas")) $("btnMasFilas").onclick = () => { S.detMostrarTodo = true; renderDetalle(); };
+  if (!f) $("detalle").querySelectorAll("tbody tr").forEach(tr => tr.onclick = () => elegirDia(new Date(+tr.dataset.dia)));
 }
+
+$("detDia").onchange = () => elegirDia($("detDia").value ? new Date(+$("detDia").value) : null);
+let tDet; $("detBuscar").oninput = () => { clearTimeout(tDet); tDet = setTimeout(renderDetalle, 200); };
+$("detTodo").onchange = renderDetalle;
 
 // ---------- interacción ----------
 const tip = $("tip");
@@ -699,8 +816,7 @@ $("chart").addEventListener("click", ev => {
   const g = ev.target.closest(".row");
   if (!g) return;
   const f = filasMes[+g.dataset.i];
-  S.diaSel = S.diaSel && S.diaSel.getTime() === f.fecha.getTime() ? null : f.fecha;
-  render();
+  elegirDia(S.diaSel && S.diaSel.getTime() === f.fecha.getTime() ? null : f.fecha);
   if (S.diaSel && innerWidth < 900) $("detTitle").scrollIntoView({ behavior: "smooth" });
 });
 

@@ -75,5 +75,10 @@ regenera y abre la página).
   búsqueda de texto en ocurrencia, hecho, causa, acción y producto. Lo que no cumple el filtro se ve como "Fuera del filtro".
 - Ventana horaria (ej. 17:00 → 23:00) y L-V / Sáb-Dom. Clic en un día muestra su detalle; sin día elegido se listan las
   25 interrupciones más largas del período. Clic en la leyenda resalta una categoría.
+- **Tabla de interrupciones**: todas las declaraciones del período (o del día elegido), ordenadas de mayor a menor minutos.
+  Clic en cualquier encabezado para ordenar por esa columna (otro clic invierte el orden), buscador propio y opción de
+  incluir paradas programadas y libre. Clic en una fila o en el selector "Día" filtra por ese día: la tabla, los
+  indicadores y los minutos por categoría pasan a ser de ese día.
+- Colores corporativos AZA (azul y verde).
 - **Resumen** por mes o por semana de todo lo cargado: % prod., horas por tipo, N° de fallas y la disciplina con más falla.
   Clic en una fila la abre en el gráfico.
