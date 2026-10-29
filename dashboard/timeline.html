@@ -24,6 +24,7 @@
   --c-retraso: #ef6c00;
   --c-libre: #bdbdbd;
   --c-sinreg: #eeeeec;
+  --c-filtrada: #e3d9d3;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -45,6 +46,7 @@
     --c-retraso: #f08a24;
     --c-libre: #5c5c58;
     --c-sinreg: #262624;
+    --c-filtrada: #4a403c;
   }
 }
 :root[data-theme="dark"] {
@@ -66,8 +68,10 @@
   --c-retraso: #f08a24;
   --c-libre: #5c5c58;
   --c-sinreg: #262624;
+  --c-filtrada: #4a403c;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
   font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -78,7 +82,7 @@ h1 { font-size: 22px; margin: 0 0 2px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end; }
 .controls label { display: flex; flex-direction: column; font-size: 12px; color: var(--text-2); gap: 3px; }
-select, input[type=time], button {
+select, input[type=time], input[type=date], input[type=search], button {
   font: inherit; font-size: 13px; color: var(--text); background: var(--surface);
   border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
 }
@@ -131,18 +135,40 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowra
 .muted { color: var(--text-3); }
 .drop { outline: 2px dashed var(--accent); outline-offset: -8px; }
 .estado { flex-basis: 100%; font-size: 12.5px; color: var(--text-2); }
+.nav { display: inline-flex; gap: 4px; align-items: center; }
+.nav button { padding: 5px 9px; }
+#filtros select { max-width: 220px; }
+#fTexto { width: 100%; }
+.mini { display: flex; height: 10px; width: 160px; border-radius: 2px; overflow: hidden; background: var(--grid); }
+.mini span { height: 100%; }
+#resumen tbody tr { cursor: pointer; }
+#resumen tbody tr:hover { background: var(--hover); }
+#resumen tbody tr.actual { background: var(--sel); }
 .empty { padding: 40px; text-align: center; color: var(--text-2); }
 </style>
 </head>
 <body>
 <main>
   <h1>Timeline de planta</h1>
-  <p class="sub" id="sub">Cada fila es un día del mes. Sin declaración = tren disponible / en producción.</p>
+  <p class="sub" id="sub">Cada fila es un día. Sin declaración = tren disponible / en producción.</p>
 
   <div class="card controls">
-    <label>Mes <select id="mes"></select></label>
-    <label>Desde <input type="time" id="desde" value="00:00" step="1800"></label>
-    <label>Hasta <input type="time" id="hasta" value="23:59" step="1800"></label>
+    <label>Ver
+      <span class="seg" id="vista">
+        <button data-v="mes" class="on">Mes</button><button data-v="semana">Semana</button><button data-v="rango">Rango</button>
+      </span>
+    </label>
+    <label id="lblMes">Mes
+      <span class="nav"><button data-nav="mes" data-d="-1" title="Anterior">‹</button><select id="mes"></select><button data-nav="mes" data-d="1" title="Siguiente">›</button></span>
+    </label>
+    <label id="lblSemana" hidden>Semana
+      <span class="nav"><button data-nav="semana" data-d="-1" title="Anterior">‹</button><select id="semana"></select><button data-nav="semana" data-d="1" title="Siguiente">›</button></span>
+    </label>
+    <label id="lblRango" hidden>Fechas
+      <span class="nav"><input type="date" id="rDesde"> → <input type="date" id="rHasta"></span>
+    </label>
+    <label>Hora desde <input type="time" id="desde" value="00:00" step="1800"></label>
+    <label>Hora hasta <input type="time" id="hasta" value="23:59" step="1800"></label>
     <label>Días
       <span class="seg" id="dias">
         <button data-v="todos" class="on">Todos</button><button data-v="lv">L-V</button><button data-v="sd">Sáb-Dom</button>
@@ -168,6 +194,16 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowra
     <div class="estado" id="vinculoEstado"></div>
   </div>
 
+  <div class="card controls" id="filtros">
+    <label>Tipo <select id="fTipo"></select></label>
+    <label>Disciplina <select id="fDisc"></select></label>
+    <label>Zona <select id="fZona"></select></label>
+    <label>Equipo <select id="fEquipo"></select></label>
+    <label style="flex:1;min-width:200px">Buscar <input type="search" id="fTexto" placeholder="Ocurrencia, hecho, causa, producto…"></label>
+    <label><span>&nbsp;</span><button type="button" id="btnLimpiar">Limpiar filtros</button></label>
+    <div class="estado" id="filtroEstado"></div>
+  </div>
+
   <div class="kpis" id="kpis"></div>
 
   <div class="card" style="margin-top:14px">
@@ -179,12 +215,21 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowra
   <div class="split">
     <div class="card">
       <h2 id="detTitle">Detalle del día</h2>
-      <div class="tbl-wrap" id="detalle"><p class="muted">Haz clic en un día del gráfico para ver sus interrupciones.</p></div>
+      <div class="tbl-wrap" id="detalle"></div>
     </div>
     <div class="card">
-      <h2>Minutos por categoría en el mes</h2>
+      <h2>Minutos por categoría en el período</h2>
       <div class="bars" id="bars"></div>
     </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+      <h2 style="margin:0">Resumen</h2>
+      <span class="seg" id="agr"><button data-v="mes" class="on">Por mes</button><button data-v="semana">Por semana</button></span>
+      <span class="muted" style="font-size:12.5px">Aplica los filtros, la ventana horaria y los días elegidos. Clic en una fila para verla en el gráfico.</span>
+    </div>
+    <div class="tbl-wrap" id="resumen"></div>
   </div>
 
   <div class="card">
@@ -211,6 +256,7 @@ const TIPOS = {
   retraso: { nombre: "Retraso",             color: "var(--c-retraso)" },
   libre:   { nombre: "Libre (sin programa)",color: "var(--c-libre)" },
   sinreg:  { nombre: "Sin registro",        color: "var(--c-sinreg)" },
+  filtrada:{ nombre: "Fuera del filtro",    color: "var(--c-filtrada)" },
 };
 const COLOR_DISC = {
   "Operación": "#e34948", "Electrónica": "#eda100", "Mecánica": "#eb6834",
@@ -279,7 +325,7 @@ function leerEventos(texto) {
 }
 
 // ---------- estado ----------
-const S = { eventos: [], cobertura: [], nombre: "", mes: null, desde: 0, hasta: 1440, dias: "todos", modo: "tipo", orden: "desc", resaltadas: new Set(), diaSel: null };
+const S = { vista: "mes", semana: null, rDesde: "", rHasta: "", agr: "mes", meses: [], semanas: [], eventos: [], cobertura: [], nombre: "", mes: null, desde: 0, hasta: 1440, dias: "todos", modo: "tipo", orden: "desc", resaltadas: new Set(), diaSel: null };
 let filasMes = [];
 
 const $ = id => document.getElementById(id);
@@ -298,7 +344,7 @@ function colorDisc(nombre) {
 
 // Clave de color/leyenda de un segmento según el modo.
 function claveSeg(s) {
-  if (!s.ev) return s.tipo;
+  if (!s.ev || s.tipo === "filtrada") return s.tipo;
   if (S.modo === "tipo" || s.tipo === "prog" || s.tipo === "padron" || s.tipo === "libre") return s.tipo;
   return "d:" + s.ev.disciplina;
 }
@@ -309,8 +355,34 @@ function infoClave(k) {
 
 // Segmentos de un día (minutos desde 00:00). Los huecos sin declaración son producción si
 // algún archivo cubre ese tramo, y "Sin registro" si no.
+// ---------- filtros ----------
+const F = { tipo: "", disc: "", zona: "", equipo: "", texto: "" };
+const filtroActivo = () => !!(F.tipo || F.disc || F.zona || F.equipo || F.texto);
+function pasaFiltro(e) {
+  if (F.tipo && e.tipo !== F.tipo) return false;
+  if (F.disc && e.disciplina !== F.disc) return false;
+  if (F.zona && e.zona !== F.zona) return false;
+  if (F.equipo && e.equipo !== F.equipo) return false;
+  if (F.texto) {
+    if (e.txt === undefined) e.txt = norm([e.ocurrencia, e.hecho, e.causa, e.accion, e.producto, e.equipo, e.subequipo, e.zona, e.disciplina].join(" "));
+    if (!e.txt.includes(norm(F.texto))) return false;
+  }
+  return true;
+}
+
+let cacheDias = new Map();
+const invalidar = () => { cacheDias = new Map(); };
+
+// Primer evento con inicio >= t (los eventos están ordenados por inicio).
+function primerIndice(t) {
+  let lo = 0, hi = S.eventos.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (S.eventos[m].ini.getTime() < t) lo = m + 1; else hi = m; }
+  return lo;
+}
+
 function segmentosDia(fecha) {
   const d0 = fecha.getTime(), d1 = d0 + 86400000;
+  if (cacheDias.has(d0)) return cacheDias.get(d0);
   const segs = []; let cursor = d0;
   const hueco = (a, b) => {
     for (const [c0, c1] of S.cobertura) {
@@ -321,29 +393,61 @@ function segmentosDia(fecha) {
     }
     if (a < b) segs.push({ tipo: "sinreg", a, b });
   };
-  for (const ev of S.eventos) {
-    if (ev.fin <= d0 || ev.ini >= d1 || ev.dur <= 0) continue;
+  // una declaración no dura más de unos días: basta con mirar desde una semana antes
+  for (let i = primerIndice(d0 - 7 * 86400000); i < S.eventos.length; i++) {
+    const ev = S.eventos[i];
+    if (ev.ini >= d1) break;
+    if (ev.fin <= d0 || ev.dur <= 0) continue;
     const a = Math.max(ev.ini.getTime(), d0), b = Math.min(ev.fin.getTime(), d1);
     if (a > cursor) hueco(cursor, a);
-    segs.push({ tipo: ev.tipo, ev, a: Math.max(a, cursor), b });
+    segs.push({ tipo: pasaFiltro(ev) ? ev.tipo : "filtrada", ev, a: Math.max(a, cursor), b });
     cursor = Math.max(cursor, b);
   }
   if (cursor < d1) hueco(cursor, d1);
-  return segs
+  const res = segs
     .filter(s => s.b > s.a)
     .map(s => ({ ...s, m0: (s.a - d0) / 60000, m1: (s.b - d0) / 60000 }));
+  cacheDias.set(d0, res);
+  return res;
 }
 
+// ---------- períodos ----------
+const lunes = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; };
+function semanaISO(d) {
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 3 - (d.getDay() + 6) % 7); // jueves de esa semana
+  const ene4 = new Date(t.getFullYear(), 0, 4);
+  return { anio: t.getFullYear(), sem: 1 + Math.round(((t - ene4) / 86400000 - 3 + (ene4.getDay() + 6) % 7) / 7) };
+}
+const sumarDias = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const aISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const deISO = v => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ""); return m ? new Date(+m[1], m[2] - 1, +m[3]) : null; };
+const fmtDM = d => `${pad(d.getDate())}-${pad(d.getMonth() + 1)}`;
+function nombreSemana(lu) { const w = semanaISO(lu); return `S${pad(w.sem)} ${w.anio} · ${fmtDM(lu)} → ${fmtDM(sumarDias(lu, 6))}`; }
+
+// [primer día, último día] del período en pantalla
+function periodo() {
+  if (S.vista === "semana" && S.semana) { const a = new Date(+S.semana); return [a, sumarDias(a, 6)]; }
+  if (S.vista === "rango") {
+    let a = deISO(S.rDesde), b = deISO(S.rHasta);
+    if (a && b) { if (b < a) [a, b] = [b, a]; return [a, b]; }
+  }
+  const [y, m] = (S.mes || aISO(new Date()).slice(0, 7)).split("-").map(Number);
+  return [new Date(y, m - 1, 1), new Date(y, m, 0)];
+}
+function tituloPeriodo() {
+  const [a, b] = periodo();
+  if (S.vista === "semana" && S.semana) { const w = semanaISO(a); return `Semana ${w.sem} · ${fmtDM(a)} → ${fmtDM(b)}-${b.getFullYear()}`; }
+  if (S.vista === "rango") return `${fmtFecha(a)} → ${fmtFecha(b)}`;
+  return `${MESES[a.getMonth()]} ${a.getFullYear()}`;
+}
+const pasaDia = dow => !(S.dias === "lv" && (dow === 0 || dow === 6)) && !(S.dias === "sd" && dow >= 1 && dow <= 5);
+
 function construirMes() {
-  const [y, m] = S.mes.split("-").map(Number);
-  const n = new Date(y, m, 0).getDate();
+  const [a, b] = periodo();
   filasMes = [];
-  for (let d = 1; d <= n; d++) {
-    const fecha = new Date(y, m - 1, d);
+  for (let fecha = a; fecha <= b; fecha = sumarDias(fecha, 1)) {
     const dow = fecha.getDay();
-    if (S.dias === "lv" && (dow === 0 || dow === 6)) continue;
-    if (S.dias === "sd" && dow >= 1 && dow <= 5) continue;
-    filasMes.push({ fecha, dow, segs: segmentosDia(fecha) });
+    if (pasaDia(dow)) filasMes.push({ fecha, dow, segs: segmentosDia(fecha) });
   }
   if (S.orden === "desc") filasMes.reverse();
 }
@@ -356,14 +460,15 @@ function render() {
   if (!S.eventos.length) {
     $("chart").innerHTML = `<div class="empty">Carga el CSV de “Hecho causa acción” con <b>Vincular CSV…</b> (se actualiza solo), <b>Cargar CSV…</b> o arrastrándolo a esta página.</div>`;
     $("kpis").innerHTML = ""; $("legend").innerHTML = ""; $("bars").innerHTML = ""; $("ctitle").textContent = "";
+    $("resumen").innerHTML = ""; $("detalle").innerHTML = "";
     return;
   }
   construirMes();
-  const [y, m] = S.mes.split("-").map(Number);
   const rango = `${hhmm(S.desde)} → ${hhmm(S.hasta)}`;
   const diasTxt = { todos: "", lv: " L-V", sd: " Sáb-Dom" }[S.dias];
-  $("ctitle").textContent = `Timeline ${MESES[m - 1]} ${y}${diasTxt} (${rango})`;
-  $("sub").textContent = `${S.nombre ? S.nombre + " · " : ""}${S.eventos.length} declaraciones. Cada fila es un día; sin declaración = tren disponible / en producción.`;
+  $("ctitle").textContent = `Timeline ${tituloPeriodo()}${diasTxt} (${rango})`;
+  const d0 = S.eventos[0].ini, d1 = S.eventos[S.eventos.length - 1].ini;
+  $("sub").textContent = `${S.nombre ? S.nombre + " · " : ""}${fmtNum(S.eventos.length)} declaraciones del ${fmtFecha(d0)} al ${fmtFecha(d1)}. Cada fila es un día; sin declaración = tren disponible / en producción.`;
 
   // Totales del mes por clave y por tipo
   const tot = new Map(), totTipo = {};
@@ -378,11 +483,70 @@ function render() {
   renderChart();
   renderBars(tot);
   renderDetalle();
+  renderFiltroEstado();
+  renderResumen();
+}
+
+function renderFiltroEstado() {
+  if (!filtroActivo()) { $("filtroEstado").textContent = "Sin filtros: se muestran todas las declaraciones."; return; }
+  const evs = new Set(); let min = 0;
+  for (const f of filasMes) for (const s of f.segs) {
+    const mm = enVentana(s);
+    if (s.ev && s.tipo !== "filtrada" && mm) { evs.add(s.ev); min += mm; }
+  }
+  $("filtroEstado").innerHTML = `Filtro activo: <b>${evs.size}</b> declaraciones (${fmtNum(min / 60, 1)} h) en el período. El resto de las declaraciones se ve en color <span class="sw" style="background:var(--c-filtrada);vertical-align:-1px"></span> “Fuera del filtro”.`;
+}
+
+// Totales por tipo de un conjunto de días (respeta filtros, ventana horaria y días).
+function totalesDias(a, b) {
+  const t = { min: {}, evs: new Set(), disc: new Map() };
+  for (let fecha = a; fecha <= b; fecha = sumarDias(fecha, 1)) {
+    if (!pasaDia(fecha.getDay())) continue;
+    for (const s of segmentosDia(fecha)) {
+      const mm = enVentana(s); if (!mm) continue;
+      t.min[s.tipo] = (t.min[s.tipo] || 0) + mm;
+      if (s.ev && (s.tipo === "falla" || s.tipo === "retraso")) {
+        t.evs.add(s.ev);
+        t.disc.set(s.ev.disciplina, (t.disc.get(s.ev.disciplina) || 0) + mm);
+      }
+    }
+  }
+  return t;
+}
+
+function renderResumen() {
+  const porSemana = S.agr === "semana";
+  const filas = porSemana
+    ? S.semanas.map(k => { const a = new Date(+k); return { k, nombre: nombreSemana(a), a, b: sumarDias(a, 6) }; })
+    : S.meses.map(k => { const [y, m] = k.split("-").map(Number); return { k, nombre: `${MESES[m - 1]} ${y}`, a: new Date(y, m - 1, 1), b: new Date(y, m, 0) }; });
+  const actual = porSemana ? (S.vista === "semana" ? S.semana : null) : (S.vista === "mes" ? S.mes : null);
+  const orden = ["prod", "falla", "retraso", "padron", "prog", "filtrada", "libre"];
+  const h = v => v ? fmtNum(v / 60, 1) : "—";
+  $("resumen").innerHTML = `<table><thead><tr><th>${porSemana ? "Semana" : "Mes"}</th><th class="n">% prod.</th><th class="n">Prod. h</th>
+    <th class="n">Falla h</th><th class="n">Retraso h</th><th class="n">Padrón h</th><th class="n">Programada h</th><th class="n">Libre h</th>
+    <th class="n">N° fallas</th><th>Disciplina con más falla</th><th>Composición</th></tr></thead><tbody>${
+    filas.slice().reverse().map(f => {
+      const t = totalesDias(f.a, f.b), g = k => t.min[k] || 0;
+      const prog = g("prod") + g("falla") + g("retraso") + g("padron") + g("prog") + g("filtrada");
+      const total = orden.reduce((x, k) => x + g(k), 0) || 1;
+      const top = [...t.disc.entries()].sort((x, y) => y[1] - x[1])[0];
+      return `<tr data-k="${f.k}" class="${String(f.k) === String(actual) ? "actual" : ""}">
+        <td style="white-space:nowrap">${f.nombre}</td><td class="n"><b>${prog ? fmtNum(g("prod") / prog * 100, 1) + " %" : "—"}</b></td>
+        <td class="n">${h(g("prod"))}</td><td class="n">${h(g("falla"))}</td><td class="n">${h(g("retraso"))}</td><td class="n">${h(g("padron"))}</td>
+        <td class="n">${h(g("prog"))}</td><td class="n">${h(g("libre"))}</td><td class="n">${t.evs.size || "—"}</td>
+        <td>${top ? `${esc(top[0])} <span class="muted">${fmtNum(top[1] / 60, 1)} h</span>` : "—"}</td>
+        <td><div class="mini">${orden.map(k => g(k) ? `<span style="width:${g(k) / total * 100}%;background:${TIPOS[k].color}" title="${TIPOS[k].nombre}: ${fmtNum(g(k) / 60, 1)} h"></span>` : "").join("")}</div></td></tr>`;
+    }).join("")}</tbody></table>`;
+  $("resumen").querySelectorAll("tbody tr").forEach(tr => tr.onclick = () => {
+    if (porSemana) { S.vista = "semana"; S.semana = tr.dataset.k; } else { S.vista = "mes"; S.mes = tr.dataset.k; }
+    S.diaSel = null; sincronizarControles(); render();
+    $("ctitle").scrollIntoView({ behavior: "smooth" });
+  });
 }
 
 function renderKpis(t) {
   const g = k => t[k] || 0;
-  const conPrograma = g("prod") + g("prog") + g("padron") + g("falla") + g("retraso");
+  const conPrograma = g("prod") + g("prog") + g("padron") + g("falla") + g("retraso") + g("filtrada");
   const disp = conPrograma ? g("prod") / conPrograma * 100 : 0;
   const nInt = new Set();
   for (const f of filasMes) for (const s of f.segs) if (s.ev && (s.tipo === "falla" || s.tipo === "retraso") && enVentana(s)) nInt.add(s.ev);
@@ -421,7 +585,10 @@ function renderLegend(tot) {
 function renderChart() {
   const W = Math.max(360, $("chart").clientWidth);
   const angosto = W < 640;
-  const L = angosto ? 62 : 92, R = angosto ? 44 : 60, T = 6, rowH = angosto ? 22 : 30, barH = angosto ? 12 : 16, B = 52;
+  const n = filasMes.length;
+  const rowH = n <= 10 ? (angosto ? 30 : 44) : n <= 45 ? (angosto ? 22 : 30) : 18;
+  const barH = Math.round(rowH * 0.55);
+  const L = angosto ? 62 : 92, R = angosto ? 44 : 60, T = 6, B = 52;
   const pw = W - L - R, H = T + filasMes.length * rowH + B;
   const span = S.hasta - S.desde;
   const x = mm => L + (mm - S.desde) / span * pw;
@@ -445,7 +612,7 @@ function renderChart() {
     const pct = prog ? `${Math.round(prod / prog * 100)}%` : "—";
     svg += `<g class="row${sel ? " sel" : ""}" data-i="${i}">
       <rect class="rowbg" x="0" y="${y0}" width="${W}" height="${rowH}" fill="transparent"/>
-      <text class="lab" x="${L - 10}" y="${y0 + rowH / 2 + 4}" text-anchor="end" font-size="${angosto ? 11 : 13}" fill="var(--text)"${f.dow === 0 || f.dow === 6 ? ' font-style="italic"' : ""}>${fechaTxt}</text>
+      <text class="lab" x="${L - 10}" y="${y0 + rowH / 2 + 4}" text-anchor="end" font-size="${angosto || rowH < 20 ? 11 : 13}" fill="var(--text)"${f.dow === 0 || f.dow === 6 ? ' font-style="italic"' : ""}>${fechaTxt}</text>
       <text class="pct" x="${W - R + 8}" y="${y0 + rowH / 2 + 4}" font-size="11.5" fill="var(--text-2)">${pct}</text>`;
     for (const [j, s] of f.segs.entries()) {
       const a = Math.max(s.m0, S.desde), b = Math.min(s.m1, S.hasta);
@@ -458,6 +625,9 @@ function renderChart() {
       svg += `<rect class="${cls}" data-i="${i}" data-j="${j}" x="${x0.toFixed(2)}" y="${yb}" width="${w.toFixed(2)}" height="${barH}" fill="${info.color}"${rayado}/>`;
     }
     svg += `</g>`;
+    // separador entre meses cuando se ven varios
+    if (i > 0 && filasMes[i - 1].fecha.getMonth() !== f.fecha.getMonth())
+      svg += `<line x1="0" x2="${W}" y1="${y0}" y2="${y0}" stroke="var(--text-3)" stroke-width="1"/>`;
   });
   svg += `<text x="${W - R + 8}" y="${T + filasMes.length * rowH + 36}" font-size="11" fill="var(--text-3)">% prod.</text>`;
   svg += `</svg>`;
@@ -477,7 +647,19 @@ function renderBars(tot) {
 
 function renderDetalle() {
   const f = S.diaSel && filasMes.find(r => r.fecha.getTime() === S.diaSel.getTime());
-  if (!f) { $("detTitle").textContent = "Detalle del día"; return; }
+  if (!f) {
+    $("detTitle").textContent = "Mayores interrupciones del período";
+    const evs = new Set();
+    for (const r of filasMes) for (const s of r.segs)
+      if (s.ev && !["prod", "sinreg", "libre", "prog", "filtrada"].includes(s.tipo) && enVentana(s)) evs.add(s.ev);
+    const top = [...evs].sort((a, b) => b.dur - a.dur).slice(0, 25);
+    $("detalle").innerHTML = (top.length ? `<p class="muted" style="margin:-4px 0 8px;font-size:12.5px">Las 25 más largas (sin paradas programadas). Clic en un día del gráfico para ver todo ese día.</p><table><thead><tr><th>Fecha</th><th>Inicio</th><th class="n">Min</th><th>Tipo</th><th>Disciplina</th><th>Zona / Equipo</th><th>Ocurrencia</th><th>Hecho</th></tr></thead><tbody>${
+      top.map(e => `<tr><td>${fmtDM(e.ini)} ${DIAS[e.ini.getDay()]}</td><td>${fmtHora(e.ini)}</td><td class="n">${fmtNum(e.dur, 2)}</td>
+        <td><span class="sw" style="background:${TIPOS[e.tipo].color};vertical-align:-1px"></span> ${esc(TIPOS[e.tipo].nombre)}</td>
+        <td>${esc(e.disciplina)}</td><td>${esc(e.zona)}${e.equipo ? " / " + esc(e.equipo) : ""}</td><td>${esc(e.ocurrencia)}</td><td>${esc(e.hecho)}</td></tr>`).join("")}</tbody></table>`
+      : `<p class="muted">Sin interrupciones en el período.</p>`);
+    return;
+  }
   $("detTitle").textContent = `Detalle ${DIAS[f.dow]} ${pad(f.fecha.getDate())}-${pad(f.fecha.getMonth() + 1)}-${f.fecha.getFullYear()}`;
   const evs = f.segs.filter(s => s.ev && enVentana(s));
   if (!evs.length) { $("detalle").innerHTML = `<p class="muted">Sin declaraciones en la ventana: el tren estuvo disponible.</p>`; return; }
@@ -528,8 +710,63 @@ function seg(id, key) {
     S[key] = b.dataset.v; if (key === "modo") S.resaltadas.clear(); render();
   });
 }
-seg("dias", "dias"); seg("modo", "modo"); seg("orden", "orden");
+seg("modo", "modo"); seg("orden", "orden");
+seg("dias", "dias"); seg("agr", "agr");
+
+function sincronizarControles() {
+  for (const [id, v] of [["vista", S.vista], ["agr", S.agr]])
+    $(id).querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.v === v));
+  $("lblMes").hidden = S.vista !== "mes";
+  $("lblSemana").hidden = S.vista !== "semana";
+  $("lblRango").hidden = S.vista !== "rango";
+  if (S.mes) $("mes").value = S.mes;
+  if (S.semana) $("semana").value = S.semana;
+  $("rDesde").value = S.rDesde; $("rHasta").value = S.rHasta;
+}
+$("vista").querySelectorAll("button").forEach(b => b.onclick = () => {
+  const [a, c] = periodo(); // el período actual pasa a la nueva vista
+  S.vista = b.dataset.v;
+  if (S.vista === "semana") { const k = String(lunes(S.diaSel || a).getTime()); S.semana = S.semanas.includes(k) ? k : S.semanas[S.semanas.length - 1]; }
+  if (S.vista === "rango" && (!S.rDesde || !S.rHasta)) { S.rDesde = aISO(a); S.rHasta = aISO(c); }
+  if (S.vista !== "rango") S.agr = S.vista;
+  S.diaSel = null; sincronizarControles(); render();
+});
 $("mes").onchange = () => { S.mes = $("mes").value; S.diaSel = null; render(); };
+$("semana").onchange = () => { S.semana = $("semana").value; S.diaSel = null; render(); };
+$("rDesde").onchange = $("rHasta").onchange = () => { S.rDesde = $("rDesde").value; S.rHasta = $("rHasta").value; S.diaSel = null; render(); };
+document.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => {
+  const sel = $(b.dataset.nav), i = sel.selectedIndex + +b.dataset.d;
+  if (i < 0 || i >= sel.options.length) return;
+  sel.selectedIndex = i; sel.onchange();
+});
+
+function llenarFiltros() {
+  const uniq = arr => [...new Set(arr.filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+  const opts = (id, vals, actual, todos, nombre = v => v) => {
+    $(id).innerHTML = `<option value="">${todos}</option>` + vals.map(v => `<option value="${esc(v)}"${v === actual ? " selected" : ""}>${esc(nombre(v))}</option>`).join("");
+  };
+  const tipos = ["falla", "retraso", "padron", "prog", "libre"].filter(k => S.eventos.some(e => e.tipo === k));
+  if (F.tipo && !tipos.includes(F.tipo)) F.tipo = "";
+  opts("fTipo", tipos, F.tipo, "Todos", k => TIPOS[k].nombre);
+  const base = S.eventos.filter(e => !F.tipo || e.tipo === F.tipo);
+  const discs = uniq(base.map(e => e.disciplina));
+  if (F.disc && !discs.includes(F.disc)) F.disc = "";
+  opts("fDisc", discs, F.disc, "Todas");
+  const enDisc = base.filter(e => !F.disc || e.disciplina === F.disc);
+  const zonas = uniq(enDisc.map(e => e.zona));
+  if (F.zona && !zonas.includes(F.zona)) F.zona = "";
+  opts("fZona", zonas, F.zona, "Todas");
+  const equipos = uniq(enDisc.filter(e => !F.zona || e.zona === F.zona).map(e => e.equipo));
+  if (F.equipo && !equipos.includes(F.equipo)) F.equipo = "";
+  opts("fEquipo", equipos, F.equipo, "Todos");
+}
+function cambiarFiltro() {
+  F.tipo = $("fTipo").value; F.disc = $("fDisc").value; F.zona = $("fZona").value; F.equipo = $("fEquipo").value; F.texto = $("fTexto").value.trim();
+  llenarFiltros(); invalidar(); render();
+}
+["fTipo", "fDisc", "fZona", "fEquipo"].forEach(id => $(id).onchange = cambiarFiltro);
+let tTexto; $("fTexto").oninput = () => { clearTimeout(tTexto); tTexto = setTimeout(cambiarFiltro, 250); };
+$("btnLimpiar").onclick = () => { $("fTexto").value = ""; Object.keys(F).forEach(k => F[k] = ""); llenarFiltros(); invalidar(); render(); };
 const leerHora = (v, def) => { const m = /^(\d{1,2}):(\d{2})/.exec(v); return m ? +m[1] * 60 + +m[2] : def; };
 function horas() {
   let d = leerHora($("desde").value, 0), h = leerHora($("hasta").value, 1440);
@@ -605,10 +842,16 @@ function aplicar() {
   const mesPrevio = S.mes;
   S.eventos = evs; S.diaSel = null;
   S.nombre = lotes.length === 1 ? lotes[0].nombre : `${lotes.length} archivos`;
+  invalidar();
   const meses = [...new Set(evs.map(e => `${e.ini.getFullYear()}-${pad(e.ini.getMonth() + 1)}`))].sort();
   $("mes").innerHTML = meses.map(k => { const [y, m] = k.split("-"); return `<option value="${k}">${MESES[m - 1]} ${y}</option>`; }).join("");
   S.mes = meses.includes(mesPrevio) ? mesPrevio : meses[meses.length - 1];
-  if (S.mes) $("mes").value = S.mes;
+  const semanas = [...new Set(evs.map(e => lunes(e.ini).getTime()))].sort((a, b) => a - b).map(String);
+  $("semana").innerHTML = semanas.map(k => `<option value="${k}">${nombreSemana(new Date(+k))}</option>`).join("");
+  if (!semanas.includes(S.semana)) S.semana = semanas[semanas.length - 1] || null;
+  S.meses = meses; S.semanas = semanas;
+  llenarFiltros();
+  sincronizarControles();
   renderLotes(info);
   render();
 }

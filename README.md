@@ -69,4 +69,11 @@ regenera y abre la página).
   falla toma el color de su disciplina (Mecánica, Electrónica, Operación…).
 - % prod. de cada día = minutos de producción / minutos con programa (excluye Libre y Sin registro) dentro de la ventana horaria.
 - Lo que no cubre ningún archivo (antes de su primer día o después de su última declaración) queda como "Sin registro".
-- Filtros: mes, ventana horaria (ej. 17:00 → 23:00), L-V / Sáb-Dom. Clic en un día muestra su detalle; clic en la leyenda resalta una categoría.
+- Ver por **Mes**, **Semana** (ISO, lunes a domingo) o **Rango** de fechas; con ‹ › se pasa al período anterior o siguiente.
+  Se puede cargar el HCA de todo el año en un solo CSV.
+- Filtros por Tipo, Disciplina, Zona, Equipo (se encadenan: al elegir una disciplina solo quedan sus zonas y equipos) y
+  búsqueda de texto en ocurrencia, hecho, causa, acción y producto. Lo que no cumple el filtro se ve como "Fuera del filtro".
+- Ventana horaria (ej. 17:00 → 23:00) y L-V / Sáb-Dom. Clic en un día muestra su detalle; sin día elegido se listan las
+  25 interrupciones más largas del período. Clic en la leyenda resalta una categoría.
+- **Resumen** por mes o por semana de todo lo cargado: % prod., horas por tipo, N° de fallas y la disciplina con más falla.
+  Clic en una fila la abre en el gráfico.
